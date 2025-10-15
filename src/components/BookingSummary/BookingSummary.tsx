@@ -1,12 +1,14 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useCart } from '@/app/cart/cart'
+import { useRouter } from 'next/navigation'
+import { useCart } from '@/cart/cart'
 
 interface BookingSummaryProps {
   selectedRate: string;
 }
 
 export default function BookingSummary({ selectedRate }: BookingSummaryProps) {
+  const router = useRouter()
   const { rooms, subTotal, removeRoom, clearCart } = useCart()
   const [total, setTotal] = useState(0)
   const [isHydrated, setIsHydrated] = useState(false)
@@ -88,7 +90,10 @@ export default function BookingSummary({ selectedRate }: BookingSummaryProps) {
         <p className="text-sm font-medium text-gray-900">Pago pendiente: {total.toLocaleString('es-CO')} COP</p>
       </div>
 
-      <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold text-lg">
+      <button 
+        onClick={() => router.push('/booking')}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold text-lg transition-colors"
+      >
         Reservar
       </button>
     </div>

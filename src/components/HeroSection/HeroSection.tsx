@@ -2,8 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { DateRange } from 'react-day-picker';
-import DatePicker from '@/app/components/DatePicker/DatePicker';
-import GuestSelector from '@/app/components/GuestSelector/GuestSelector';
+import DatePicker from '@/components/DatePicker/DatePicker';
+import GuestSelector from '@/components/GuestSelector/GuestSelector';
 
 interface Room {
   id: number;
@@ -22,8 +22,17 @@ export default function HeroSection() {
     { id: 3, adults: 2, children: 0, babies: 0 },
     { id: 4, adults: 2, children: 0, babies: 0 }
   ]);
+  const [isAvailable, setIsAvailable] = useState(true);
   const dateButtonRef = useRef<HTMLButtonElement>(null);
   const guestButtonRef = useRef<HTMLDivElement>(null);
+
+  // Simular fechas no disponibles (para demo)
+  const unavailableDates = [
+    new Date(2025, 9, 15), // 15 octubre
+    new Date(2025, 9, 16), // 16 octubre
+    new Date(2025, 9, 17), // 17 octubre
+    new Date(2025, 9, 18), // 18 octubre
+  ];
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('es-ES', { 
@@ -35,6 +44,16 @@ export default function HeroSection() {
 
   const handleDateSelect = (range: DateRange | undefined) => {
     setSelectedRange(range);
+    
+    // Verificar disponibilidad
+    if (range?.from && range?.to) {
+      const hasUnavailableDate = unavailableDates.some(date => 
+        date >= range.from! && date <= range.to!
+      );
+      setIsAvailable(!hasUnavailableDate);
+    } else {
+      setIsAvailable(true);
+    }
   };
 
   const handleGuestSelect = (rooms: Room[]) => {
@@ -63,6 +82,18 @@ export default function HeroSection() {
         {/* Booking Widget Overlay */}
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-4">
           <div className="bg-white rounded-lg shadow-xl p-6">
+            {/* Mensaje de disponibilidad */}
+            {selectedRange?.from && selectedRange?.to && !isAvailable && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center">
+                <svg className="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-blue-800 text-sm">
+                  El alojamiento no tiene disponibilidad durante las fechas indicadas. Pruebe a elegir otras.
+                </span>
+              </div>
+            )}
+            
             <div className="flex flex-col md:flex-row gap-4 items-center">
                 <div className="flex-1 relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Seleccionar fechas</label>

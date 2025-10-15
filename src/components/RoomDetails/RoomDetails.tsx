@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { useCart } from '@/app/cart/cart';
-import RoomInfoModal from '@/app/components/RoomInfoModal/RoomInfoModal';
+import { useCart } from '@/cart/cart';
+import RoomInfoModal from '@/components/RoomInfoModal/RoomInfoModal';
 
 interface RoomDetailsProps {
   selectedRate: string;
