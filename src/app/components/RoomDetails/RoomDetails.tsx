@@ -9,7 +9,7 @@ interface RoomDetailsProps {
 }
 
 export default function RoomDetails({ selectedRate, onRateSelect }: RoomDetailsProps) {
-  const { addRoom } = useCart();
+  const { addRoomAutoLink } = useCart();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalRoomType, setModalRoomType] = useState('');
   const [modalPrice, setModalPrice] = useState(0);
@@ -87,10 +87,16 @@ export default function RoomDetails({ selectedRate, onRateSelect }: RoomDetailsP
     const room = rooms.find(r => r.id === roomId);
     const rate = room?.rates.find(r => r.id === rateId);
     if (room && rate) {
-      addRoom({
+      // Extraer capacidad del texto (ej: "Capacidad para 4" -> 4)
+      const capacityMatch = room.capacity.match(/\d+/);
+      const capacity = capacityMatch ? parseInt(capacityMatch[0]) : 4;
+      
+      addRoomAutoLink({
         id: `${roomId}-${rateId}`,
         name: `${room.name} - ${rate.name}`,
-        price: rate.price
+        price: rate.price,
+        basePrice: rate.price, // Precio base por 2 huéspedes
+        capacity: capacity
       });
       onRateSelect(rateId);
     }
