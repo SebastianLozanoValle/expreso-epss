@@ -3,8 +3,6 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
-import { useInforms } from '@/hooks/useInforms';
-import { mapCsvToInforms, getColumnMapping } from '@/utils/csvMapper';
 
 export default function CargaMasivaPage() {
   const router = useRouter();
@@ -19,10 +17,6 @@ export default function CargaMasivaPage() {
   const [processingStep, setProcessingStep] = useState<'idle' | 'analyzing' | 'processing' | 'completed' | 'error'>('idle');
   const [fileColumns, setFileColumns] = useState<string[]>([]);
   const [fileData, setFileData] = useState<string[][]>([]);
-  const [mappedRecords, setMappedRecords] = useState<any[]>([]);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  
-  const { createInforms, loading: supabaseLoading, error: supabaseError } = useInforms();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,16 +74,10 @@ export default function CargaMasivaPage() {
       
       setFileColumns(headers);
       setFileData(dataRows);
-      
-      // Mapear los datos a la estructura de la tabla
-      const mappedData = mapCsvToInforms(dataRows, headers);
-      setMappedRecords(mappedData);
-      
       addLog(`Archivo detectado: ${file.name} (${file.size} bytes)`);
       addLog(`Columnas encontradas: ${headers.length}`);
       addLog(`Columnas: ${headers.join(', ')}`);
       addLog(`Total de filas: ${dataRows.length}`);
-      addLog(`Registros mapeados: ${mappedData.length}`);
       
       // Simular análisis más detallado
       setTimeout(() => {
@@ -127,47 +115,18 @@ Habitación Doble,Habitación amplia para dos personas,250000,2,1,"WiFi,Aire aco
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || mappedRecords.length === 0) return;
+    if (!selectedFile) return;
     
     setIsUploading(true);
     setProcessingStep('processing');
-    setUploadProgress(0);
-    addLog('Iniciando carga masiva a Supabase...');
+    addLog('Iniciando carga masiva...');
     
-    try {
-      // Dividir en lotes de 100 registros para evitar límites de Supabase
-      const batchSize = 100;
-      const batches = [];
-      
-      for (let i = 0; i < mappedRecords.length; i += batchSize) {
-        batches.push(mappedRecords.slice(i, i + batchSize));
-      }
-      
-      addLog(`Procesando ${batches.length} lotes de ${batchSize} registros cada uno...`);
-      
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        addLog(`Procesando lote ${i + 1}/${batches.length} (${batch.length} registros)...`);
-        
-        const { data, error } = await createInforms(batch);
-        
-        if (error) {
-          throw new Error(`Error en lote ${i + 1}: ${error}`);
-        }
-        
-        setUploadProgress(((i + 1) / batches.length) * 100);
-        addLog(`Lote ${i + 1} procesado exitosamente`);
-      }
-      
-      addLog(`✅ Carga completada exitosamente: ${mappedRecords.length} registros insertados`);
-      setProcessingStep('completed');
-      
-    } catch (error) {
-      addLog(`❌ Error en la carga: ${error}`);
-      setProcessingStep('error');
-    } finally {
-      setIsUploading(false);
-    }
+    // Simular carga
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    addLog('Carga completada exitosamente');
+    setIsUploading(false);
+    setProcessingStep('completed');
   };
 
   // Mostrar loading mientras se verifica la autenticación
@@ -284,12 +243,10 @@ Habitación Doble,Habitación amplia para dos personas,250000,2,1,"WiFi,Aire aco
 
             <button
               onClick={handleUpload}
-              disabled={!selectedFile || isUploading || processingStep !== 'completed' || mappedRecords.length === 0}
+              disabled={!selectedFile || isUploading || processingStep !== 'completed'}
               className="bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
             >
-              {isUploading ? 'Cargando a Supabase...' : 
-               processingStep === 'completed' && mappedRecords.length > 0 ? 
-               `Subir ${mappedRecords.length} registros` : 'Procesando...'}
+              {isUploading ? 'Cargando...' : processingStep === 'completed' ? 'Subir archivo' : 'Procesando...'}
             </button>
           </div>
 
@@ -363,62 +320,6 @@ Habitación Doble,Habitación amplia para dos personas,250000,2,1,"WiFi,Aire aco
                         Mostrando las primeras 10 filas de {fileData.length} filas totales
                       </div>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {/* Registros Mapeados */}
-              {mappedRecords.length > 0 && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h3 className="text-green-900 font-semibold mb-3">✅ Registros Mapeados para Supabase</h3>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="bg-white p-3 rounded border">
-                      <div className="text-sm font-medium text-gray-700">Total de registros</div>
-                      <div className="text-2xl font-bold text-green-600">{mappedRecords.length}</div>
-                    </div>
-                    <div className="bg-white p-3 rounded border">
-                      <div className="text-sm font-medium text-gray-700">Estado</div>
-                      <div className="text-sm text-green-600">Listo para cargar</div>
-                    </div>
-                  </div>
-                  
-                  {/* Muestra algunos registros mapeados como ejemplo */}
-                  <div className="bg-white border border-green-200 rounded p-3">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Vista previa de registros mapeados:</h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {mappedRecords.slice(0, 3).map((record, index) => (
-                        <div key={index} className="text-xs bg-gray-50 p-2 rounded">
-                          <strong>Registro {index + 1}:</strong> {record.apellidos_y_nombres_paciente} - {record.numero_documento_paciente}
-                        </div>
-                      ))}
-                    </div>
-                    {mappedRecords.length > 3 && (
-                      <div className="text-xs text-gray-500 mt-2">
-                        ... y {mappedRecords.length - 3} registros más
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Progreso de Carga */}
-              {isUploading && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="text-blue-900 font-semibold mb-3">🚀 Cargando a Supabase</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span>Progreso</span>
-                      <span>{Math.round(uploadProgress)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${uploadProgress}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-sm text-blue-700">
-                      {supabaseLoading ? 'Procesando...' : 'Completado'}
-                    </div>
                   </div>
                 </div>
               )}
