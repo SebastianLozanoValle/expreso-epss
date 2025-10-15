@@ -85,9 +85,13 @@ export default function BookingSummary({ selectedRate }: BookingSummaryProps) {
         </button>
       </div>
 
-      <div className="text-center mb-6">
-        <p className="text-sm text-gray-600 mb-1">Reserve ahora, ¡pague después!</p>
-        <p className="text-sm font-medium text-gray-900">Pago pendiente: {total.toLocaleString('es-CO')} COP</p>
+      <div className="bg-green-50 p-4 rounded-lg mb-6">
+        <p className="text-sm font-medium text-green-800 mb-1">
+          Reserve ahora, ¡pague después!
+        </p>
+        <p className="text-sm text-green-700">
+          Pago pendiente: {total.toLocaleString('es-CO')} COP
+        </p>
       </div>
 
       <button 

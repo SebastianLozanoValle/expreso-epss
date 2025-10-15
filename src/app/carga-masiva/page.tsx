@@ -3,6 +3,8 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { useInforms } from '@/hooks/useInforms';
+import { mapCsvToInforms, getColumnMapping } from '@/utils/csvMapper';
 
 export default function CargaMasivaPage() {
   const router = useRouter();
@@ -16,6 +18,11 @@ export default function CargaMasivaPage() {
   const [logs, setLogs] = useState<string[]>([]);
   const [processingStep, setProcessingStep] = useState<'idle' | 'analyzing' | 'processing' | 'completed' | 'error'>('idle');
   const [fileColumns, setFileColumns] = useState<string[]>([]);
+  const [fileData, setFileData] = useState<string[][]>([]);
+  const [mappedRecords, setMappedRecords] = useState<any[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
+  const { createInforms, loading: supabaseLoading, error: supabaseError } = useInforms();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,14 +70,26 @@ export default function CargaMasivaPage() {
     
     try {
       const text = await file.text();
-      const lines = text.split('\n');
+      const lines = text.split('\n').filter(line => line.trim() !== '');
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
       
+      // Procesar todas las filas de datos (excluyendo el header)
+      const dataRows = lines.slice(1).map(line => 
+        line.split(',').map(cell => cell.trim().replace(/"/g, ''))
+      );
+      
       setFileColumns(headers);
+      setFileData(dataRows);
+      
+      // Mapear los datos a la estructura de la tabla
+      const mappedData = mapCsvToInforms(dataRows, headers);
+      setMappedRecords(mappedData);
+      
       addLog(`Archivo detectado: ${file.name} (${file.size} bytes)`);
       addLog(`Columnas encontradas: ${headers.length}`);
       addLog(`Columnas: ${headers.join(', ')}`);
-      addLog(`Total de filas: ${lines.length - 1}`);
+      addLog(`Total de filas: ${dataRows.length}`);
+      addLog(`Registros mapeados: ${mappedData.length}`);
       
       // Simular análisis más detallado
       setTimeout(() => {
@@ -108,18 +127,47 @@ Habitación Doble,Habitación amplia para dos personas,250000,2,1,"WiFi,Aire aco
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || mappedRecords.length === 0) return;
     
     setIsUploading(true);
     setProcessingStep('processing');
-    addLog('Iniciando carga masiva...');
+    setUploadProgress(0);
+    addLog('Iniciando carga masiva a Supabase...');
     
-    // Simular carga
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    addLog('Carga completada exitosamente');
-    setIsUploading(false);
-    setProcessingStep('completed');
+    try {
+      // Dividir en lotes de 100 registros para evitar límites de Supabase
+      const batchSize = 100;
+      const batches = [];
+      
+      for (let i = 0; i < mappedRecords.length; i += batchSize) {
+        batches.push(mappedRecords.slice(i, i + batchSize));
+      }
+      
+      addLog(`Procesando ${batches.length} lotes de ${batchSize} registros cada uno...`);
+      
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        addLog(`Procesando lote ${i + 1}/${batches.length} (${batch.length} registros)...`);
+        
+        const { data, error } = await createInforms(batch);
+        
+        if (error) {
+          throw new Error(`Error en lote ${i + 1}: ${error}`);
+        }
+        
+        setUploadProgress(((i + 1) / batches.length) * 100);
+        addLog(`Lote ${i + 1} procesado exitosamente`);
+      }
+      
+      addLog(`✅ Carga completada exitosamente: ${mappedRecords.length} registros insertados`);
+      setProcessingStep('completed');
+      
+    } catch (error) {
+      addLog(`❌ Error en la carga: ${error}`);
+      setProcessingStep('error');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Mostrar loading mientras se verifica la autenticación
@@ -171,17 +219,6 @@ Habitación Doble,Habitación amplia para dos personas,250000,2,1,"WiFi,Aire aco
                 <div className="text-2xl mb-2">⏳</div>
                 <h3 className="font-semibold text-purple-900">4. Espera la carga</h3>
                 <p className="text-sm text-purple-700">El sistema procesará y validará los datos</p>
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <h3 className="font-semibold text-gray-900 mb-2">Requisitos del archivo CSV:</h3>
-              <div className="space-y-2 text-sm text-gray-600">
-                <p>• El archivo debe estar en formato CSV</p>
-                <p>• La primera fila debe contener los encabezados</p>
-                <p>• Los encabezados no deben contener caracteres especiales</p>
-                <p>• Para columnas de fecha y hora, usa el formato: YYYY-MM-DD HH:MM:SS</p>
-                <p>• Las comodidades deben separarse por comas dentro de comillas</p>
               </div>
             </div>
 
@@ -247,16 +284,18 @@ Habitación Doble,Habitación amplia para dos personas,250000,2,1,"WiFi,Aire aco
 
             <button
               onClick={handleUpload}
-              disabled={!selectedFile || isUploading || processingStep !== 'completed'}
+              disabled={!selectedFile || isUploading || processingStep !== 'completed' || mappedRecords.length === 0}
               className="bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
             >
-              {isUploading ? 'Cargando...' : processingStep === 'completed' ? 'Subir archivo' : 'Procesando...'}
+              {isUploading ? 'Cargando a Supabase...' : 
+               processingStep === 'completed' && mappedRecords.length > 0 ? 
+               `Subir ${mappedRecords.length} registros` : 'Procesando...'}
             </button>
           </div>
 
-          {/* Logs y Columnas Detectadas */}
+          {/* Logs y Análisis de Datos */}
           {(logs.length > 0 || fileColumns.length > 0) && (
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="mt-8 space-y-6">
               {/* Logs de Procesamiento */}
               <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm">
                 <h3 className="text-white font-semibold mb-3">📋 Logs de Procesamiento</h3>
@@ -282,6 +321,104 @@ Habitación Doble,Habitación amplia para dos personas,250000,2,1,"WiFi,Aire aco
                   </div>
                   <div className="mt-3 text-sm text-blue-700">
                     <strong>Total de columnas:</strong> {fileColumns.length}
+                  </div>
+                </div>
+              )}
+
+              {/* Tabla de Datos */}
+              {fileData.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-gray-900 font-semibold mb-4">📊 Contenido del Archivo</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border border-gray-300">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            #
+                          </th>
+                          {fileColumns.map((column, index) => (
+                            <th key={index} className="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {column}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {fileData.slice(0, 10).map((row, rowIndex) => (
+                          <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900 font-medium">
+                              {rowIndex + 1}
+                            </td>
+                            {row.map((cell, cellIndex) => (
+                              <td key={cellIndex} className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {fileData.length > 10 && (
+                      <div className="mt-3 text-sm text-gray-600 text-center">
+                        Mostrando las primeras 10 filas de {fileData.length} filas totales
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Registros Mapeados */}
+              {mappedRecords.length > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="text-green-900 font-semibold mb-3">✅ Registros Mapeados para Supabase</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="bg-white p-3 rounded border">
+                      <div className="text-sm font-medium text-gray-700">Total de registros</div>
+                      <div className="text-2xl font-bold text-green-600">{mappedRecords.length}</div>
+                    </div>
+                    <div className="bg-white p-3 rounded border">
+                      <div className="text-sm font-medium text-gray-700">Estado</div>
+                      <div className="text-sm text-green-600">Listo para cargar</div>
+                    </div>
+                  </div>
+                  
+                  {/* Muestra algunos registros mapeados como ejemplo */}
+                  <div className="bg-white border border-green-200 rounded p-3">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Vista previa de registros mapeados:</h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {mappedRecords.slice(0, 3).map((record, index) => (
+                        <div key={index} className="text-xs bg-gray-50 p-2 rounded">
+                          <strong>Registro {index + 1}:</strong> {record.apellidos_y_nombres_paciente} - {record.numero_documento_paciente}
+                        </div>
+                      ))}
+                    </div>
+                    {mappedRecords.length > 3 && (
+                      <div className="text-xs text-gray-500 mt-2">
+                        ... y {mappedRecords.length - 3} registros más
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Progreso de Carga */}
+              {isUploading && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="text-blue-900 font-semibold mb-3">🚀 Cargando a Supabase</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span>Progreso</span>
+                      <span>{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-sm text-blue-700">
+                      {supabaseLoading ? 'Procesando...' : 'Completado'}
+                    </div>
                   </div>
                 </div>
               )}
