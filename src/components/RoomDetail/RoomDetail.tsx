@@ -1,6 +1,6 @@
 'use client
 import { useEffect, useState } from 'react'
-import api from '@/lib/axios'
+import api from '@/app/lib/axios'
 import { useCart } from '@/cart/cart'
 
 export default function RoomDetail({ id }: { id: string }) {

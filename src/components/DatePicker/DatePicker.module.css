@@ -1,17 +1,11 @@
-/* Estilos personalizados para el DatePicker */
-
+/* Estilos personalizados para el DatePicker con 3 meses horizontales */
 .rdp {
-  --rdp-cell-size: 40px;
+  --rdp-cell-size: 24px;
   --rdp-accent-color: #0d9488;
   --rdp-background-color: #ffffff;
-  --rdp-accent-color-dark: #0f766e;
-  --rdp-background-color-dark: #ffffff;
   --rdp-outline: 2px solid var(--rdp-accent-color);
-  --rdp-outline-selected: 3px solid var(--rdp-accent-color);
+  --rdp-outline-selected: 2px solid var(--rdp-accent-color);
   margin: 0;
-}
-
-.rdp-months {
   display: flex;
   flex-direction: row;
   gap: 16px;

@@ -1,0 +1,110 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/lib/auth-store'
+
+export default function Header() {
+  const [selectedHotel, setSelectedHotel] = useState('')
+  const router = useRouter()
+  const { user, signOut } = useAuthStore()
+
+  const hotels = [
+    { id: 'saana-45', name: 'Hotel Saana 45' },
+    { id: 'boulevar-rio', name: 'Hotel Boulevar del Rio' },
+    { id: 'ilar-corferias', name: 'Hotel Ilar Corferias' }
+  ]
+
+  const handleHotelChange = (hotelId: string) => {
+    setSelectedHotel(hotelId)
+    if (hotelId) {
+      router.push(`/hotel/${hotelId}`)
+    }
+  }
+
+  const handleLogout = async () => {
+    await signOut()
+    router.push('/')
+  }
+
+  return (
+    <header className="bg-white shadow-sm border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Expreso de Viajes
+            </h1>
+          </div>
+
+          {/* Hotel Selector */}
+          <div className="relative">
+              <select
+                value={selectedHotel}
+                onChange={(e) => handleHotelChange(e.target.value)}
+                className="appearance-none bg-white border-2 border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 hover:border-gray-400 transition-colors min-w-[180px]"
+              >
+                <option value="">Seleccionar Hotel</option>
+                {hotels.map((hotel) => (
+                  <option key={hotel.id} value={hotel.id}>
+                    {hotel.name}
+                  </option>
+                ))}
+              </select>
+              {/* Custom dropdown arrow */}
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+          {/* Navigation */}
+          <nav className="hidden md:flex space-x-6">
+            <button
+              onClick={() => router.push('/')}
+              className="text-gray-700 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Inicio
+            </button>
+            
+            <button
+              onClick={() => router.push('/carga-masiva')}
+              className="text-gray-700 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Carga Masiva
+            </button>
+          </nav>
+
+          {/* Right Section */}
+          <div className="flex items-center space-x-4">
+            
+
+            {/* Auth Section */}
+            {user ? (
+              <div className="flex items-center space-x-3">
+                <span className="text-sm text-gray-600 font-medium">
+                  {user.email}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                >
+                  Cerrar Sesión
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => router.push('/auth/login')}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+              >
+                Iniciar Sesión
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+  )
+}

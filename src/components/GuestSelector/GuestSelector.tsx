@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useCart } from '@/cart/cart';
 
 interface GuestSelectorProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
   ]);
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const selectorRef = useRef<HTMLDivElement>(null);
+  const { addRoom: addRoomToCart, removeRoom: removeRoomFromCart, rooms: cartRooms, addRoomWithConfig, getLinkedRoomsCount, getPreConfiguredRoomsCount, updateRoomPrice, calculatePriceForGuests } = useCart();
 
   // Calcular posición del popover
   useEffect(() => {
@@ -35,6 +37,53 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
       });
     }
   }, [isOpen, triggerRef]);
+
+  // Sincronizar con habitaciones del carrito (solo cuando se abre el selector)
+  useEffect(() => {
+    if (isOpen) {
+      const linkedRoomsCount = getLinkedRoomsCount();
+      
+      console.log('GuestSelector sincronización:', {
+        linkedRoomsCount,
+        roomsLength: rooms.length,
+        isOpen
+      });
+      
+      // Sincronizar si hay habitaciones en el carrito Y el GuestSelector tiene menos habitaciones
+      if (linkedRoomsCount > 0 && linkedRoomsCount > rooms.length) {
+        console.log('Sincronizando GuestSelector de', rooms.length, 'a', linkedRoomsCount);
+        const newRooms = [];
+        for (let i = 1; i <= linkedRoomsCount; i++) {
+          if (i <= rooms.length) {
+            // Mantener la configuración existente
+            newRooms.push(rooms[i - 1]);
+          } else {
+            // Agregar nueva habitación con configuración por defecto
+            newRooms.push({ id: i, adults: 2, children: 0, babies: 0 });
+          }
+        }
+        setRooms(newRooms);
+      }
+      // También sincronizar si el GuestSelector tiene más habitaciones que el carrito
+      else if (linkedRoomsCount > 0 && linkedRoomsCount < rooms.length) {
+        console.log('Sincronizando GuestSelector de', rooms.length, 'a', linkedRoomsCount, '(eliminando habitaciones)');
+        const newRooms = rooms.slice(0, linkedRoomsCount);
+        setRooms(newRooms);
+      }
+    }
+  }, [isOpen, cartRooms.length]); // Solo depender de cartRooms.length, no de rooms.length
+
+  // Sincronizar automáticamente cuando cambien las habitaciones del carrito
+  useEffect(() => {
+    const linkedRoomsCount = getLinkedRoomsCount();
+    
+    // Si el carrito tiene menos habitaciones que el GuestSelector, ajustar
+    if (linkedRoomsCount > 0 && linkedRoomsCount < rooms.length) {
+      console.log('Sincronización automática: eliminando habitaciones del GuestSelector');
+      const newRooms = rooms.slice(0, linkedRoomsCount);
+      setRooms(newRooms);
+    }
+  }, [cartRooms.length, getLinkedRoomsCount, rooms.length]);
 
   // Cerrar al hacer clic fuera
   useEffect(() => {
@@ -85,16 +134,33 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
       console.log('Nuevas habitaciones:', newRooms);
       return newRooms;
     });
+    
+    // Solo agregar la configuración, no al carrito automáticamente
+    // El carrito se actualizará cuando se confirme la selección
   };
+
 
   const removeRoom = (roomId: number) => {
     if (rooms.length > 1) {
       setRooms(prev => prev.filter(r => r.id !== roomId));
+      
+      // Solo actualizar la configuración local
+      // Las habitaciones se vinculan cuando se agregan desde la lista
     }
   };
 
   const handleConfirm = () => {
+    // Solo guardar la configuración de habitaciones (cantidad y huéspedes)
     onGuestSelect(rooms);
+    
+    // Actualizar precios de habitaciones existentes en el carrito
+    cartRooms.forEach((cartRoom, index) => {
+      if (index < rooms.length && cartRoom.guestConfig) {
+        const newConfig = rooms[index];
+        updateRoomPrice(cartRoom.uniqueId, newConfig);
+      }
+    });
+    
     onClose();
   };
 
@@ -144,44 +210,44 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
               key={room.id}
               className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition"
             >
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">
-                    Habitación {index + 1}
-                  </h4>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span className="text-xs text-gray-500">
-                      Capacidad: {room.adults + room.children + room.babies}/4
-                    </span>
-                    {(room.adults + room.children + room.babies) >= 4 && (
-                      <span className="text-xs text-red-500 font-medium">
-                        Máximo alcanzado
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {rooms.length > 1 && (
-                  <button
-                    onClick={() => removeRoom(room.id)}
-                    className="text-gray-400 hover:text-red-500"
-                    title="Eliminar habitación"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
+                     <div className="flex items-center justify-between mb-3">
+                       <div>
+                         <h4 className="text-sm font-medium text-gray-900">
+                           Habitación {index + 1}
+                         </h4>
+                         <div className="flex items-center space-x-2 mt-1">
+                           <span className="text-xs text-gray-500">
+                             Capacidad: {room.adults + room.children + room.babies}/4
+                           </span>
+                           {(room.adults + room.children + room.babies) >= 4 && (
+                             <span className="text-xs text-red-500 font-medium">
+                               Máximo alcanzado
+                             </span>
+                           )}
+                         </div>
+                       </div>
+                       {rooms.length > 1 && (
+                         <button
+                           onClick={() => removeRoom(room.id)}
+                           className="text-gray-400 hover:text-red-500"
+                           title="Eliminar habitación"
+                         >
+                           <svg
+                             className="w-4 h-4"
+                             fill="none"
+                             stroke="currentColor"
+                             viewBox="0 0 24 24"
+                           >
+                             <path
+                               strokeLinecap="round"
+                               strokeLinejoin="round"
+                               strokeWidth={2}
+                               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                             />
+                           </svg>
+                         </button>
+                       )}
+                     </div>
 
               <div className="grid grid-cols-3 gap-3">
                 {[
@@ -196,7 +262,7 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
                         {cat.sub}
                       </span>
                     </label>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-2">
                       <button
                         onClick={() =>
                           updateRoom(
@@ -205,14 +271,14 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
                             room[cat.field as keyof Omit<Room, 'id'>] - 1
                           )
                         }
-                        className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                        className="w-8 h-8 rounded-full border-2 border-red-300 bg-red-50 flex items-center justify-center hover:bg-red-100 hover:border-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         disabled={
                           (room[cat.field as keyof Omit<Room, 'id'>] as number) <=
                           (cat.field === 'adults' ? 1 : 0)
                         }
                       >
                         <svg
-                          className="w-3 h-3"
+                          className="w-4 h-4 text-red-600"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -235,7 +301,7 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
                             parseInt(e.target.value) || 0
                           )
                         }
-                        className="w-8 text-center border border-gray-300 rounded text-xs py-1"
+                        className="w-12 text-center border-2 border-gray-400 bg-white rounded-lg text-sm font-semibold text-gray-800 py-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                         min="0"
                       />
                       <button
@@ -247,14 +313,14 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
                           )
                         }
                         disabled={(room.adults + room.children + room.babies) >= 4}
-                        className={`w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 ${
+                        className={`w-8 h-8 rounded-full border-2 border-green-300 bg-green-50 flex items-center justify-center hover:bg-green-100 hover:border-green-400 transition-colors ${
                           (room.adults + room.children + room.babies) >= 4 
                             ? 'opacity-50 cursor-not-allowed' 
                             : ''
                         }`}
                       >
                         <svg
-                          className="w-3 h-3"
+                          className="w-4 h-4 text-green-600"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -276,18 +342,18 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between border-t border-gray-100 pt-3">
+        <div className="flex justify-between border-t border-gray-200 pt-4">
           <button
             onClick={addRoom}
-            className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
+            className="px-4 py-2 text-sm font-semibold text-blue-700 border-2 border-blue-500 bg-blue-50 rounded-lg hover:bg-blue-100 hover:border-blue-600 transition-colors shadow-sm"
           >
-            Añadir habitación
+            + Añadir habitación
           </button>
           <button
             onClick={handleConfirm}
-            className="px-4 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+            className="px-6 py-2 text-sm font-semibold text-white bg-green-600 border-2 border-green-600 rounded-lg hover:bg-green-700 hover:border-green-700 transition-colors shadow-md"
           >
-            Confirmar
+            ✓ Confirmar
           </button>
         </div>
       </div>
