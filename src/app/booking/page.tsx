@@ -1,57 +1,23 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useCart } from '@/cart/cart'
-import { useAuthStore } from '@/lib/auth-store'
-import { useAuthRedirect } from '@/hooks/useAuthRedirect'
+import { useState } from 'react';
+import { useCart } from '@/cart/cart';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { supabase } from '@/lib/supabase';
+import { TablesInsert } from '@/types/supabase';
 
 export default function BookingPage() {
-  const router = useRouter()
-  const { user } = useAuthStore()
-  const { rooms, subTotal, clearCart } = useCart()
-  
-  // Protección de autenticación
-  const { user: authUser, loading, isAuthenticated } = useAuthRedirect()
-  const [formData, setFormData] = useState({
-    nombre: '',
-    apellidos: '',
-    email: '',
-    confirmEmail: '',
-    telefono: '',
-    direccion: '',
-    direccionAdicional: '',
-    ciudad: '',
-    provincia: '',
-    codigoPostal: '',
-    pais: 'Colombia',
-    comoNosConocio: '',
-    horaLlegada: ''
-  })
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Aquí procesarías la reserva
-    console.log('Datos de la reserva:', formData)
-    // Limpiar carrito y redirigir
-    clearCart()
-    router.push('/reservation-success')
-  }
-
-  const total = subTotal()
+  const { rooms } = useCart();
+  const { user, loading, isAuthenticated } = useAuthRedirect();
+  const [formData, setFormData] = useState<{[key: string]: any}>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Verificando autenticación...</p>
@@ -60,434 +26,688 @@ export default function BookingPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-blue-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button 
-                onClick={() => router.back()}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span>Hotel Ilar 74</span>
-              </button>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm">COP | Español</span>
-            </div>
-          </div>
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Acceso requerido</h1>
+          <p className="text-gray-600">Debes iniciar sesión para continuar con la reserva.</p>
         </div>
       </div>
+    );
+  }
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Columna izquierda - Formulario */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Detalles de la habitación */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex space-x-4">
-                <div className="w-32 h-24 bg-gray-200 rounded-lg flex-shrink-0 relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                    </svg>
-                  </div>
-                  <button className="absolute left-2 top-1/2 transform -translate-y-1/2 text-white">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Individual - Solo Habitación Tarifa Estándar
-                  </h3>
-                  <button className="text-blue-600 hover:text-blue-800 text-sm mt-1">
-                    Ver más
-                  </button>
-                  <div className="mt-3 space-y-1">
-                    <p className="text-sm text-gray-600">1 huésped</p>
-                    <p className="text-sm text-gray-600">Capacidad para 1</p>
-                    <p className="text-sm text-gray-600">1 cama individual</p>
-                    <p className="text-sm text-gray-600">10m² • Vista a la ciudad</p>
-                  </div>
-                  <div className="mt-3 flex items-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="text-sm text-gray-600">Reserve ahora, pague después</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="text-sm text-gray-600">No reembolsable</span>
-                    </div>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900 mt-2">
-                    {rooms[0]?.price?.toLocaleString('es-CO') || '471.000,00'} COP
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Formulario de datos personales */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">1 Sus datos</h2>
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                </svg>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre
-                    </label>
-                    <input
-                      type="text"
-                      name="nombre"
-                      value={formData.nombre}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Apellidos
-                    </label>
-                    <input
-                      type="text"
-                      name="apellidos"
-                      value={formData.apellidos}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dirección de correo electrónico
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Confirme su dirección de correo electrónico
-                    </label>
-                    <input
-                      type="email"
-                      name="confirmEmail"
-                      value={formData.confirmEmail}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Teléfono
-                    </label>
-                    <input
-                      type="tel"
-                      name="telefono"
-                      value={formData.telefono}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dirección
-                    </label>
-                    <input
-                      type="text"
-                      name="direccion"
-                      value={formData.direccion}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dirección (línea adicional)
-                    </label>
-                    <input
-                      type="text"
-                      name="direccionAdicional"
-                      value={formData.direccionAdicional}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ciudad
-                    </label>
-                    <input
-                      type="text"
-                      name="ciudad"
-                      value={formData.ciudad}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Provincia (opcional)
-                    </label>
-                    <input
-                      type="text"
-                      name="provincia"
-                      value={formData.provincia}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Código postal
-                    </label>
-                    <input
-                      type="text"
-                      name="codigoPostal"
-                      value={formData.codigoPostal}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      País o región
-                    </label>
-                    <select
-                      name="pais"
-                      value={formData.pais}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="Colombia">Colombia</option>
-                      <option value="México">México</option>
-                      <option value="Argentina">Argentina</option>
-                      <option value="Chile">Chile</option>
-                      <option value="Perú">Perú</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ¿Cómo nos ha conocido?
-                    </label>
-                    <select
-                      name="comoNosConocio"
-                      value={formData.comoNosConocio}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Seleccionar...</option>
-                      <option value="google">Google</option>
-                      <option value="facebook">Facebook</option>
-                      <option value="instagram">Instagram</option>
-                      <option value="recomendacion">Recomendación</option>
-                      <option value="otro">Otro</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-700 mb-3">
-                    Ayúdenos a agilizar el check-in a su llegada.
-                  </p>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ¿A qué hora tiene previsto llegar?
-                    </label>
-                    <select
-                      name="horaLlegada"
-                      value={formData.horaLlegada}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Seleccionar hora...</option>
-                      <option value="12:00">12:00</option>
-                      <option value="13:00">13:00</option>
-                      <option value="14:00">14:00</option>
-                      <option value="15:00">15:00</option>
-                      <option value="16:00">16:00</option>
-                      <option value="17:00">17:00</option>
-                      <option value="18:00">18:00</option>
-                      <option value="19:00">19:00</option>
-                      <option value="20:00">20:00</option>
-                    </select>
-                  </div>
-                </div>
-              </form>
-
-              {/* Sección Completar Reserva */}
-              <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold text-sm">2</span>
-                    </div>
-                    <h2 className="text-xl font-bold text-gray-900">Completar reserva</h2>
-                  </div>
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                  </svg>
-                </div>
-                
-                <div className="border-t border-gray-200 pt-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Condiciones</h3>
-                  
-                  <div className="space-y-4">
-                    <label className="flex items-start space-x-3">
-                      <input
-                        type="checkbox"
-                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        required
-                      />
-                      <span className="text-sm text-gray-700">
-                        He leído y acepto los{' '}
-                        <a href="#" className="text-blue-600 underline hover:text-blue-800">
-                          términos y condiciones
-                        </a>
-                        .
-                      </span>
-                    </label>
-                    
-                    <label className="flex items-start space-x-3">
-                      <input
-                        type="checkbox"
-                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        required
-                      />
-                      <span className="text-sm text-gray-700">
-                        Acepto recibir comunicaciones sobre mi reserva por email y SMS.
-                      </span>
-                    </label>
-                    
-                    <label className="flex items-start space-x-3">
-                      <input
-                        type="checkbox"
-                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        required
-                      />
-                      <span className="text-sm text-gray-700">
-                        Confirmo que la información proporcionada es correcta y completa.
-                      </span>
-                    </label>
-                  </div>
-                  
-                  <div className="mt-6">
-                    <button
-                      onClick={handleSubmit}
-                      className="w-full bg-teal-600 hover:bg-teal-700 text-white py-4 rounded-lg font-semibold text-lg transition-colors"
-                    >
-                      Reservar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Columna derecha - Resumen */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                {total.toLocaleString('es-CO')} COP Total
-              </h3>
-              
-              <div className="mb-6">
-                <p className="text-sm text-gray-600">mié, 22 oct 25 - sáb, 25 oct 25</p>
-                <p className="text-sm text-gray-600">3 noches</p>
-                <p className="text-sm text-gray-600">1 habitación, 1 huésped</p>
-              </div>
-
-              <div className="border-t pt-4 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-medium text-gray-900">Detalles de la estancia</span>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Individual - Solo Habitación Tarifa Estándar</span>
-                    <span className="text-gray-900">{rooms[0]?.price?.toLocaleString('es-CO') || '471.000,00'} COP</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">1 huésped 3 noches</span>
-                    <span className="text-gray-900">{rooms[0]?.price?.toLocaleString('es-CO') || '471.000,00'} COP</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t pt-4 mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-lg font-bold text-gray-900">Total</span>
-                  <span className="text-lg font-bold text-gray-900">{total.toLocaleString('es-CO')} COP</span>
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <span>Impuestos y tarifas incluidos</span>
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-
-              <div className="bg-green-50 p-4 rounded-lg mb-6">
-                <p className="text-sm font-medium text-green-800 mb-1">
-                  Reserve ahora, ¡pague después!
-                </p>
-                <p className="text-sm text-green-700">
-                  Pago pendiente: {total.toLocaleString('es-CO')} COP
-                </p>
-              </div>
-
-            </div>
-          </div>
+  if (rooms.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">No hay habitaciones seleccionadas</h1>
+          <p className="text-gray-600">Debes seleccionar al menos una habitación para continuar.</p>
         </div>
+      </div>
+    );
+  }
+
+  const handleInputChange = (roomId: string, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [roomId]: {
+        ...prev[roomId],
+        [field]: value
+      }
+    }));
+    
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (errors[`${roomId}_${field}`]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[`${roomId}_${field}`];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    rooms.forEach(room => {
+      const roomData = formData[room.uniqueId] || {};
+      
+      // Campos obligatorios
+      const requiredFields = [
+        'tipo_documento_paciente',
+        'numero_documento_paciente', 
+        'apellidos_y_nombres_paciente',
+        'edad_paciente',
+        'regimen',
+        'descripcion_servicio',
+        'destino',
+        'numero_autorizacion',
+        'fecha_cita'
+      ];
+      
+      requiredFields.forEach(field => {
+        if (!roomData[field] || roomData[field].toString().trim() === '') {
+          newErrors[`${room.uniqueId}_${field}`] = 'Este campo es obligatorio';
+        }
+      });
+      
+      // Validar email si se proporciona
+      if (roomData.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(roomData.correo)) {
+        newErrors[`${room.uniqueId}_correo`] = 'Ingresa un email válido';
+      }
+      
+      // Validar edad
+      if (roomData.edad_paciente && (isNaN(roomData.edad_paciente) || roomData.edad_paciente < 0 || roomData.edad_paciente > 120)) {
+        newErrors[`${room.uniqueId}_edad_paciente`] = 'Ingresa una edad válida (0-120 años)';
+      }
+      
+      // Si requiere acompañante, validar campos del acompañante
+      if (roomData.requiere_acompañante) {
+        const accompanimentFields = [
+          'tipo_documento_acompañante',
+          'numero_documento_acompañante',
+          'apellidos_y_nombres_acompañante',
+          'parentesco_acompañante'
+        ];
+        
+        accompanimentFields.forEach(field => {
+          if (!roomData[field] || roomData[field].toString().trim() === '') {
+            newErrors[`${room.uniqueId}_${field}`] = 'Este campo es obligatorio cuando se requiere acompañante';
+          }
+        });
+      }
+    });
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSuccessMessage('');
+    
+    // Validar formulario
+    if (!validateForm()) {
+      alert('Por favor, completa todos los campos obligatorios correctamente');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Preparar datos para enviar a Supabase
+      const dataToInsert: TablesInsert<'informs'>[] = [];
+      
+      rooms.forEach(room => {
+        const roomData = formData[room.uniqueId] || {};
+        
+        // Crear objeto con solo los campos que tienen valor
+        const insertData: TablesInsert<'informs'> = {
+          // Campos obligatorios
+          tipo_documento_paciente: roomData.tipo_documento_paciente,
+          numero_documento_paciente: roomData.numero_documento_paciente,
+          apellidos_y_nombres_paciente: roomData.apellidos_y_nombres_paciente,
+          edad_paciente: parseInt(roomData.edad_paciente) || null,
+          regimen: roomData.regimen,
+          descripcion_servicio: roomData.descripcion_servicio,
+          destino: roomData.destino,
+          numero_autorizacion: roomData.numero_autorizacion,
+          fecha_cita: roomData.fecha_cita,
+          
+          // Campos opcionales
+          cantidad_servicios_autorizados: roomData.cantidad_servicios_autorizados ? parseInt(roomData.cantidad_servicios_autorizados) : null,
+          numero_contacto: roomData.numero_contacto || null,
+          correo: roomData.correo || null,
+          hora_cita: roomData.hora_cita || null,
+          fecha_check_in: roomData.fecha_check_in || null,
+          fecha_check_out: roomData.fecha_check_out || null,
+          hotel_asignado: roomData.hotel_asignado || null,
+          observaciones: roomData.observaciones || null,
+          requiere_acompañante: roomData.requiere_acompañante || false,
+          
+          // Campos del acompañante (solo si se requiere)
+          tipo_documento_acompañante: roomData.requiere_acompañante ? roomData.tipo_documento_acompañante : null,
+          numero_documento_acompañante: roomData.requiere_acompañante ? roomData.numero_documento_acompañante : null,
+          apellidos_y_nombres_acompañante: roomData.requiere_acompañante ? roomData.apellidos_y_nombres_acompañante : null,
+          parentesco_acompañante: roomData.requiere_acompañante ? roomData.parentesco_acompañante : null,
+        };
+        
+        dataToInsert.push(insertData);
+      });
+      
+      // Enviar a Supabase
+      const { data, error } = await supabase
+        .from('informs')
+        .insert(dataToInsert);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setSuccessMessage(`¡Reserva realizada exitosamente! Se han registrado ${dataToInsert.length} reserva${dataToInsert.length !== 1 ? 's' : ''}.`);
+      
+      // Limpiar formulario después del éxito
+      setFormData({});
+      
+    } catch (error) {
+      console.error('Error al procesar la reserva:', error);
+      alert(`Error al procesar la reserva: ${error.message || 'Error desconocido'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="h-screen bg-gray-50 overflow-y-auto">
+      
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Completar Reserva</h1>
+          <p className="text-gray-600">Proporciona la información requerida para cada habitación</p>
+          
+          {successMessage && (
+            <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <p className="text-green-800 font-medium">{successMessage}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {rooms.map((room, index) => (
+            <RoomForm 
+              key={room.uniqueId}
+              room={room}
+              roomIndex={index}
+              formData={formData[room.uniqueId] || {}}
+              onInputChange={(field, value) => handleInputChange(room.uniqueId, field, value)}
+              errors={errors}
+            />
+          ))}
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" style={{maxHeight: '75vh', overflowY: 'auto'}}>
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Total de la Reserva</h3>
+                <p className="text-sm text-gray-600">
+                  {rooms.length} habitación{rooms.length !== 1 ? 'es' : ''} • 
+                  {rooms.reduce((total, room) => {
+                    const roomGuests = room.guestConfig 
+                      ? room.guestConfig.adults + room.guestConfig.children + room.guestConfig.babies
+                      : 2;
+                    return total + roomGuests;
+                  }, 0)} huésped{rooms.reduce((total, room) => {
+                    const roomGuests = room.guestConfig 
+                      ? room.guestConfig.adults + room.guestConfig.children + room.guestConfig.babies
+                      : 2;
+                    return total + roomGuests;
+                  }, 0) !== 1 ? 'es' : ''}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-gray-900">
+                  {rooms.reduce((total, room) => total + room.price, 0).toLocaleString('es-CO')} COP
+                </div>
+                <div className="text-sm text-gray-600">Total</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            <button
+              type="button"
+              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSubmitting ? 'Procesando...' : 'Confirmar Reserva'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
-  )
+  );
+}
+
+interface RoomFormProps {
+  room: any;
+  roomIndex: number;
+  formData: {[key: string]: any};
+  onInputChange: (field: string, value: any) => void;
+  errors: {[key: string]: string};
+}
+
+function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomFormProps) {
+  const [isAccompanimentExpanded, setIsAccompanimentExpanded] = useState(false);
+  
+  const getFieldError = (field: string) => errors[`${room.uniqueId}_${field}`];
+  
+  const getInputClassName = (field: string) => {
+    const hasError = getFieldError(field);
+    return `w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+      hasError ? 'border-red-500 bg-red-50' : 'border-gray-300'
+    }`;
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Header del acordeón */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+              {roomIndex + 1}
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">{room.name}</h3>
+              <p className="text-sm text-gray-600">
+                {room.guestConfig 
+                  ? `${room.guestConfig.adults + room.guestConfig.children + room.guestConfig.babies} huésped${room.guestConfig.adults + room.guestConfig.children + room.guestConfig.babies !== 1 ? 'es' : ''}`
+                  : '2 huéspedes'
+                }
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-semibold text-gray-900">
+              {room.price.toLocaleString('es-CO')} COP
+            </div>
+            <div className="text-sm text-gray-600">por noche</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido del acordeón */}
+      <div className="p-6 space-y-6">
+        {/* Información Principal del Paciente */}
+        <div>
+          <h4 className="text-md font-semibold text-gray-900 mb-4">Información del Paciente</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Documento *
+              </label>
+              <select
+                value={formData.tipo_documento_paciente || ''}
+                onChange={(e) => onInputChange('tipo_documento_paciente', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors[`${room.uniqueId}_tipo_documento_paciente`] 
+                    ? 'border-red-500 bg-red-50' 
+                    : 'border-gray-300'
+                }`}
+                required
+              >
+                <option value="">Seleccionar...</option>
+                <option value="CC">Cédula de Ciudadanía</option>
+                <option value="TI">Tarjeta de Identidad</option>
+                <option value="CE">Cédula de Extranjería</option>
+                <option value="PA">Pasaporte</option>
+              </select>
+              {errors[`${room.uniqueId}_tipo_documento_paciente`] && (
+                <p className="mt-1 text-sm text-red-600">{errors[`${room.uniqueId}_tipo_documento_paciente`]}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Número de Documento *
+              </label>
+              <input
+                type="text"
+                value={formData.numero_documento_paciente || ''}
+                onChange={(e) => onInputChange('numero_documento_paciente', e.target.value)}
+                className={getInputClassName('numero_documento_paciente')}
+                required
+              />
+              {getFieldError('numero_documento_paciente') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('numero_documento_paciente')}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombres y Apellidos *
+              </label>
+              <input
+                type="text"
+                value={formData.apellidos_y_nombres_paciente || ''}
+                onChange={(e) => onInputChange('apellidos_y_nombres_paciente', e.target.value)}
+                className={getInputClassName('apellidos_y_nombres_paciente')}
+                required
+              />
+              {getFieldError('apellidos_y_nombres_paciente') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('apellidos_y_nombres_paciente')}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Edad *
+              </label>
+              <input
+                type="number"
+                value={formData.edad_paciente || ''}
+                onChange={(e) => onInputChange('edad_paciente', e.target.value)}
+                className={getInputClassName('edad_paciente')}
+                required
+                min="0"
+                max="120"
+              />
+              {getFieldError('edad_paciente') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('edad_paciente')}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Régimen *
+              </label>
+              <select
+                value={formData.regimen || ''}
+                onChange={(e) => onInputChange('regimen', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+                <option value="">Seleccionar...</option>
+                <option value="Contributivo">Contributivo</option>
+                <option value="Subsidiado">Subsidiado</option>
+                <option value="Especial">Especial</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Descripción del Servicio *
+              </label>
+              <input
+                type="text"
+                value={formData.descripcion_servicio || ''}
+                onChange={(e) => onInputChange('descripcion_servicio', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Destino *
+              </label>
+              <input
+                type="text"
+                value={formData.destino || ''}
+                onChange={(e) => onInputChange('destino', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Número de Autorización *
+              </label>
+              <input
+                type="text"
+                value={formData.numero_autorizacion || ''}
+                onChange={(e) => onInputChange('numero_autorizacion', e.target.value)}
+                className={getInputClassName('numero_autorizacion')}
+                required
+              />
+              {getFieldError('numero_autorizacion') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('numero_autorizacion')}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cantidad de Servicios Autorizados
+              </label>
+              <input
+                type="number"
+                value={formData.cantidad_servicios_autorizados || ''}
+                onChange={(e) => onInputChange('cantidad_servicios_autorizados', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Número de Contacto
+              </label>
+              <input
+                type="tel"
+                value={formData.numero_contacto || ''}
+                onChange={(e) => onInputChange('numero_contacto', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Correo Electrónico
+              </label>
+              <input
+                type="email"
+                value={formData.correo || ''}
+                onChange={(e) => onInputChange('correo', e.target.value)}
+                className={getInputClassName('correo')}
+              />
+              {getFieldError('correo') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('correo')}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha de Cita *
+              </label>
+              <input
+                type="date"
+                value={formData.fecha_cita || ''}
+                onChange={(e) => onInputChange('fecha_cita', e.target.value)}
+                className={getInputClassName('fecha_cita')}
+                required
+              />
+              {getFieldError('fecha_cita') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('fecha_cita')}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Hora de Cita
+              </label>
+              <input
+                type="time"
+                value={formData.hora_cita || ''}
+                onChange={(e) => onInputChange('hora_cita', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha de Check In
+              </label>
+              <input
+                type="date"
+                value={formData.fecha_check_in || ''}
+                onChange={(e) => onInputChange('fecha_check_in', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha de Check Out
+              </label>
+              <input
+                type="date"
+                value={formData.fecha_check_out || ''}
+                onChange={(e) => onInputChange('fecha_check_out', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Hotel Asignado
+              </label>
+              <input
+                type="text"
+                value={formData.hotel_asignado || ''}
+                onChange={(e) => onInputChange('hotel_asignado', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Observaciones
+              </label>
+              <textarea
+                value={formData.observaciones || ''}
+                onChange={(e) => onInputChange('observaciones', e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Switch para Acompañante */}
+        <div className="border-t pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-md font-semibold text-gray-900">¿Requiere Acompañante?</h4>
+              <p className="text-sm text-gray-600">Marca si el paciente requiere acompañante</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.requiere_acompañante || false}
+                onChange={(e) => {
+                  onInputChange('requiere_acompañante', e.target.checked);
+                  if (!e.target.checked) {
+                    setIsAccompanimentExpanded(false);
+                  }
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+
+        {/* Formulario de Acompañante (Opcional) */}
+        {formData.requiere_acompañante && (
+          <div className="border-t pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-md font-semibold text-gray-900">Información del Acompañante</h4>
+              <button
+                type="button"
+                onClick={() => setIsAccompanimentExpanded(!isAccompanimentExpanded)}
+                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+              >
+                <span className="text-sm font-medium">
+                  {isAccompanimentExpanded ? 'Ocultar' : 'Mostrar'} detalles
+                </span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${isAccompanimentExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+
+            {isAccompanimentExpanded && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Documento del Acompañante
+                  </label>
+                  <select
+                    value={formData.tipo_documento_acompañante || ''}
+                    onChange={(e) => onInputChange('tipo_documento_acompañante', e.target.value)}
+                    className={getInputClassName('tipo_documento_acompañante')}
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="CC">Cédula de Ciudadanía</option>
+                    <option value="TI">Tarjeta de Identidad</option>
+                    <option value="CE">Cédula de Extranjería</option>
+                    <option value="PA">Pasaporte</option>
+                  </select>
+                  {getFieldError('tipo_documento_acompañante') && (
+                    <p className="mt-1 text-sm text-red-600">{getFieldError('tipo_documento_acompañante')}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Número de Documento del Acompañante
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.numero_documento_acompañante || ''}
+                    onChange={(e) => onInputChange('numero_documento_acompañante', e.target.value)}
+                    className={getInputClassName('numero_documento_acompañante')}
+                  />
+                  {getFieldError('numero_documento_acompañante') && (
+                    <p className="mt-1 text-sm text-red-600">{getFieldError('numero_documento_acompañante')}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombres y Apellidos del Acompañante
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.apellidos_y_nombres_acompañante || ''}
+                    onChange={(e) => onInputChange('apellidos_y_nombres_acompañante', e.target.value)}
+                    className={getInputClassName('apellidos_y_nombres_acompañante')}
+                  />
+                  {getFieldError('apellidos_y_nombres_acompañante') && (
+                    <p className="mt-1 text-sm text-red-600">{getFieldError('apellidos_y_nombres_acompañante')}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Parentesco con el Acompañante
+                  </label>
+                  <select
+                    value={formData.parentesco_acompañante || ''}
+                    onChange={(e) => onInputChange('parentesco_acompañante', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Cónyuge">Cónyuge</option>
+                    <option value="Hijo(a)">Hijo(a)</option>
+                    <option value="Padre/Madre">Padre/Madre</option>
+                    <option value="Hermano(a)">Hermano(a)</option>
+                    <option value="Otro familiar">Otro familiar</option>
+                    <option value="Amigo(a)">Amigo(a)</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

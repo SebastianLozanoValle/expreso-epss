@@ -110,9 +110,9 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
         if (room.id === roomId) {
           const newRoom = { ...room, [field]: Math.max(0, value) };
           
-          // Validar capacidad máxima (4 huéspedes por defecto)
+          // Validar capacidad máxima (2 huéspedes por defecto)
           const totalGuests = newRoom.adults + newRoom.children + newRoom.babies;
-          const maxCapacity = 4; // Capacidad por defecto, se puede hacer dinámico
+          const maxCapacity = 2; // Capacidad por defecto, se puede hacer dinámico
           
           if (totalGuests > maxCapacity) {
             // Si excede la capacidad, no actualizar
@@ -217,9 +217,9 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
                          </h4>
                          <div className="flex items-center space-x-2 mt-1">
                            <span className="text-xs text-gray-500">
-                             Capacidad: {room.adults + room.children + room.babies}/4
+                             Capacidad: {room.adults + room.children + room.babies}/2
                            </span>
-                           {(room.adults + room.children + room.babies) >= 4 && (
+                           {(room.adults + room.children + room.babies) >= 2 && (
                              <span className="text-xs text-red-500 font-medium">
                                Máximo alcanzado
                              </span>
@@ -312,9 +312,9 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
                             room[cat.field as keyof Omit<Room, 'id'>] + 1
                           )
                         }
-                        disabled={(room.adults + room.children + room.babies) >= 4}
+                        disabled={(room.adults + room.children + room.babies) >= 2}
                         className={`w-8 h-8 rounded-full border-2 border-green-300 bg-green-50 flex items-center justify-center hover:bg-green-100 hover:border-green-400 transition-colors ${
-                          (room.adults + room.children + room.babies) >= 4 
+                          (room.adults + room.children + room.babies) >= 2 
                             ? 'opacity-50 cursor-not-allowed' 
                             : ''
                         }`}

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/auth-store'
+import Link from 'next/link'
 
 export default function Header() {
   const [selectedHotel, setSelectedHotel] = useState('')
@@ -33,9 +34,9 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Expreso de Viajes
-            </h1>
+            <Link href="/" className="text-2xl font-bold text-gray-900">
+              Expreso Viajes y Turismo
+            </Link>
           </div>
 
           {/* Hotel Selector */}

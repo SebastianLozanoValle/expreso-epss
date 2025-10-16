@@ -28,7 +28,7 @@ export default function BookingSummary({ selectedRate }: BookingSummaryProps) {
   const subtotalAmount = total - ivaAmount
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-8">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-20">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-2xl font-bold text-gray-900">{total.toLocaleString('es-CO')} COP Total</h3>
         {rooms.length > 0 && (
@@ -145,7 +145,10 @@ export default function BookingSummary({ selectedRate }: BookingSummaryProps) {
         </div>
       </div>
 
-      <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold text-lg">
+      <button 
+        onClick={() => window.location.href = '/booking'}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold text-lg"
+      >
         Reservar
       </button>
     </div>

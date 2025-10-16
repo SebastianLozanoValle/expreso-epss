@@ -155,7 +155,7 @@ export default function LoginPage() {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-2 bg-gradient-to-br from-teal-50 to-blue-50 text-gray-500">
-                Expreso de Viajes
+                Expreso Viajes y Turismo
               </span>
             </div>
           </div>

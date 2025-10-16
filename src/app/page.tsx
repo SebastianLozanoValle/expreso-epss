@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function Home() {
   const router = useRouter();
@@ -9,22 +10,22 @@ export default function Home() {
     {
       id: 'saana-45',
       name: 'Hotel Saana 45',
-      description: 'Ubicado en el corazón de la ciudad',
-      image: '🏨',
+      description: '',
+      image: '',
       path: '/hotel/saana-45'
     },
     {
       id: 'boulevar-rio',
-      name: 'Hotel Boulevar del Rio',
-      description: 'Vista panorámica al río',
-      image: '🌊',
+      name: 'Hotel Bulevar del Rio',
+      description: '',
+      image: '',
       path: '/hotel/boulevar-rio'
     },
     {
       id: 'ilar-corferias',
       name: 'Hotel Ilar Corferias',
-      description: 'Cerca del centro de convenciones',
-      image: '🏢',
+      description: '',
+      image: '',
       path: '/hotel/ilar-corferias'
     }
   ];
@@ -36,10 +37,19 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-teal-600 to-teal-800 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="text-white py-20 relative">
+        <Image 
+          src="/hotel.jpg" 
+          alt="Hero Section" 
+          width={1920} 
+          height={400} 
+          className="absolute inset-0 w-full h-full object-cover" 
+        />
+        {/* Overlay para mejorar legibilidad del texto */}
+        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Bienvenido a Expreso de Viajes
+            Bienvenido a Expreso Viajes y Turismo
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-teal-100">
             Selecciona tu hotel y comienza tu experiencia
