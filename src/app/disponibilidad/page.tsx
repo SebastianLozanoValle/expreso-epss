@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Room, RoomsData } from '@/types/room';
 import RoomCard from '@/components/RoomCard/RoomCard';
 import { useCart } from '@/cart/cart';
 
-export default function DisponibilidadPage() {
+function DisponibilidadContent() {
   const [roomsData, setRoomsData] = useState<RoomsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -307,4 +307,19 @@ function getSampleData(): RoomsData {
     ],
     total: 2
   };
+}
+
+export default function DisponibilidadPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    }>
+      <DisponibilidadContent />
+    </Suspense>
+  );
 }
