@@ -242,7 +242,7 @@ export default function CargaMasivaPage() {
                 });
               }
             } catch (singleError) {
-              errorCount++;
+              // errorCount++;
               let errorMessage = 'Error desconocido';
               
               if (singleError instanceof Error) {

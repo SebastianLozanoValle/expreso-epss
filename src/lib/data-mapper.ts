@@ -91,9 +91,9 @@ export function transformCsvDataToInforms(
   
   // Procesar cada fila de datos
   csvData.forEach((row, rowIndex) => {
-    const transformedRow: {[key: string]: string | number | boolean | null} = {
+    const transformedRow: Record<string, any> = {
       // Campo obligatorio: user_id del usuario logueado
-      user_id: userId,
+      user_id: userId || null,
     }
     
     // Mapear cada campo
@@ -110,22 +110,22 @@ export function transformCsvDataToInforms(
           if (value && value !== '') {
             const numValue = parseInt(value)
             if (!isNaN(numValue)) {
-              transformedRow[fieldName as keyof TablesInsert<'informs'>] = numValue
+              transformedRow[fieldName] = numValue
             }
           } else {
-            transformedRow[fieldName as keyof TablesInsert<'informs'>] = null
+            transformedRow[fieldName] = null
           }
           break
           
         case 'requiere_acompañante':
         case 'POS':
           if (value && value !== '') {
-            const boolValue = value.toLowerCase() === 'si' || value.toLowerCase() === 'yes' || value === '1'
-            transformedRow[fieldName as keyof TablesInsert<'informs'>] = boolValue
+            const booleanValue = value.toLowerCase() === 'si' || value.toLowerCase() === 'yes' || value === '1';
+            transformedRow[fieldName] = booleanValue;
           } else {
-            transformedRow[fieldName as keyof TablesInsert<'informs'>] = null
+            transformedRow[fieldName] = null;
           }
-          break
+          break;
           
         case 'fecha_cita':
         case 'fecha_ultima_cita':
@@ -135,17 +135,17 @@ export function transformCsvDataToInforms(
             // Convertir fecha al formato ISO para la base de datos
             const isoDate = convertToISODate(value)
             if (isoDate) {
-              transformedRow[fieldName as keyof TablesInsert<'informs'>] = isoDate
+              transformedRow[fieldName] = isoDate
             } else {
-              transformedRow[fieldName as keyof TablesInsert<'informs'>] = value
+              transformedRow[fieldName] = value
             }
           } else {
-            transformedRow[fieldName as keyof TablesInsert<'informs'>] = null
+            transformedRow[fieldName] = null
           }
           break
           
         default:
-          transformedRow[fieldName as keyof TablesInsert<'informs'>] = value || null
+          transformedRow[fieldName] = value || null
           break
       }
     })
@@ -156,7 +156,7 @@ export function transformCsvDataToInforms(
     // console.log(`Registro ${rowIndex + 1} - datos completos:`, transformedRow)
     
     if (transformedRow.numero_autorizacion) {
-      transformedData.push(transformedRow)
+      transformedData.push(transformedRow as TablesInsert<'informs'>)
       // console.log(`Registro ${rowIndex + 1} transformado:`, transformedRow)
     } else {
       // console.log(`Registro ${rowIndex + 1} omitido - sin número de autorización`)

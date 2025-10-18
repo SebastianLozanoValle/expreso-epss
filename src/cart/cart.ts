@@ -110,8 +110,7 @@ export const useCart = create<CartState>()(
             const initialPrice = get().calculatePriceForGuests(
                 room.basePrice || room.price,
                 config.adults,
-                config.children,
-                config.babies
+                config.children
             )
             
             set((state) => ({
@@ -152,8 +151,7 @@ export const useCart = create<CartState>()(
                         const newPrice = get().calculatePriceForGuests(
                             room.basePrice,
                             guestConfig.adults,
-                            guestConfig.children,
-                            guestConfig.babies
+                            guestConfig.children
                         )
                         return {
                             ...room,

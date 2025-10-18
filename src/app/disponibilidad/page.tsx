@@ -47,10 +47,8 @@ export default function DisponibilidadPage() {
       id: room.id,
       name: room.name,
       price: room.price,
-      uniqueId: `${room.id}-${Date.now()}`,
-      image: room.image,
-      capacity: room.capacity.adults,
-      hotel: room.hotel
+      basePrice: room.price,
+      capacity: room.capacity.adults
     });
   };
 

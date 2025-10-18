@@ -18,11 +18,11 @@ interface Room {
   babies: number;
 }
 
-export default function GuestSelector({ isOpen, onClose, triggerRef }: GuestSelectorProps) {
+export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerRef }: GuestSelectorProps) {
   const [rooms, setRooms] = useState<Room[]>([
     { id: 1, adults: 2, children: 0, babies: 0 },
   ]);
-  // const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const selectorRef = useRef<HTMLDivElement>(null);
   const { rooms: cartRooms, getLinkedRoomsCount } = useCart();
 
@@ -126,18 +126,6 @@ export default function GuestSelector({ isOpen, onClose, triggerRef }: GuestSele
     );
   };
 
-  // const addRoom = () => {
-    const newId = Math.max(...rooms.map(r => r.id)) + 1;
-    console.log('Agregando habitación:', { newId, currentRooms: rooms.length });
-    setRooms(prev => {
-      const newRooms = [...prev, { id: newId, adults: 2, children: 0, babies: 0 }];
-      console.log('Nuevas habitaciones:', newRooms);
-      return newRooms;
-    });
-    
-    // Solo agregar la configuración, no al carrito automáticamente
-    // El carrito se actualizará cuando se confirme la selección
-  };
 
 
   const removeRoom = (roomId: number) => {
@@ -152,15 +140,6 @@ export default function GuestSelector({ isOpen, onClose, triggerRef }: GuestSele
   const handleConfirm = () => {
     // Solo guardar la configuración de habitaciones (cantidad y huéspedes)
     onGuestSelect(rooms);
-    
-    // Actualizar precios de habitaciones existentes en el carrito
-    cartRooms.forEach((cartRoom, index) => {
-      if (index < rooms.length && cartRoom.guestConfig) {
-        const newConfig = rooms[index];
-        updateRoomPrice(cartRoom.uniqueId, newConfig);
-      }
-    });
-    
     onClose();
   };
 
@@ -354,3 +333,4 @@ export default function GuestSelector({ isOpen, onClose, triggerRef }: GuestSele
     </div>,
     document.body
   );
+}
