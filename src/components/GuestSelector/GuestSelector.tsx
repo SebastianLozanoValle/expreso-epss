@@ -354,4 +354,3 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
     </div>,
     document.body
   );
-}

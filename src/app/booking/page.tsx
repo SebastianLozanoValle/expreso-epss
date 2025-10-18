@@ -71,7 +71,7 @@ export default function BookingPage() {
     const newErrors: {[key: string]: string} = {};
     
     rooms.forEach(room => {
-      const roomData = formData[room.uniqueId] || {};
+      const roomData = formData[room.id] || {};
       
       // Campos obligatorios
       const requiredFields = [
@@ -88,18 +88,18 @@ export default function BookingPage() {
       
       requiredFields.forEach(field => {
         if (!roomData[field] || roomData[field].toString().trim() === '') {
-          newErrors[`${room.uniqueId}_${field}`] = 'Este campo es obligatorio';
+          newErrors[`${room.id}_${field}`] = 'Este campo es obligatorio';
         }
       });
       
       // Validar email si se proporciona
-      if (roomData.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(roomData.correo)) {
-        newErrors[`${room.uniqueId}_correo`] = 'Ingresa un email válido';
+      if (roomData.correo && typeof roomData.correo === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(roomData.correo)) {
+        newErrors[`${room.id}_correo`] = 'Ingresa un email válido';
       }
       
       // Validar edad
-      if (roomData.edad_paciente && (isNaN(roomData.edad_paciente) || roomData.edad_paciente < 0 || roomData.edad_paciente > 120)) {
-        newErrors[`${room.uniqueId}_edad_paciente`] = 'Ingresa una edad válida (0-120 años)';
+      if (roomData.edad_paciente && typeof roomData.edad_paciente === 'number' && (isNaN(roomData.edad_paciente) || roomData.edad_paciente < 0 || roomData.edad_paciente > 120)) {
+        newErrors[`${room.id}_edad_paciente`] = 'Ingresa una edad válida (0-120 años)';
       }
       
       // Si requiere acompañante, validar campos del acompañante
@@ -113,7 +113,7 @@ export default function BookingPage() {
         
         accompanimentFields.forEach(field => {
           if (!roomData[field] || roomData[field].toString().trim() === '') {
-            newErrors[`${room.uniqueId}_${field}`] = 'Este campo es obligatorio cuando se requiere acompañante';
+            newErrors[`${room.id}_${field}`] = 'Este campo es obligatorio cuando se requiere acompañante';
           }
         });
       }
@@ -140,7 +140,7 @@ export default function BookingPage() {
       const dataToInsert: TablesInsert<'informs'>[] = [];
       
       rooms.forEach(room => {
-        const roomData = formData[room.uniqueId] || {};
+        const roomData = formData[room.id] || {};
         
         // Crear objeto con solo los campos que tienen valor
         const insertData: TablesInsert<'informs'> = {
@@ -148,32 +148,32 @@ export default function BookingPage() {
           user_id: user?.id,
           
           // Campos obligatorios
-          tipo_documento_paciente: roomData.tipo_documento_paciente,
-          numero_documento_paciente: roomData.numero_documento_paciente,
-          apellidos_y_nombres_paciente: roomData.apellidos_y_nombres_paciente,
-          edad_paciente: parseInt(roomData.edad_paciente) || null,
-          regimen: roomData.regimen,
-          descripcion_servicio: roomData.descripcion_servicio,
-          destino: roomData.destino,
-          numero_autorizacion: roomData.numero_autorizacion,
-          fecha_cita: roomData.fecha_cita,
+          tipo_documento_paciente: String(roomData.tipo_documento_paciente || ''),
+          numero_documento_paciente: String(roomData.numero_documento_paciente || ''),
+          apellidos_y_nombres_paciente: String(roomData.apellidos_y_nombres_paciente || ''),
+          edad_paciente: typeof roomData.edad_paciente === 'number' ? roomData.edad_paciente : parseInt(String(roomData.edad_paciente)) || null,
+          regimen: String(roomData.regimen || ''),
+          descripcion_servicio: String(roomData.descripcion_servicio || ''),
+          destino: String(roomData.destino || ''),
+          numero_autorizacion: String(roomData.numero_autorizacion || ''),
+          fecha_cita: String(roomData.fecha_cita || ''),
           
           // Campos opcionales
-          cantidad_servicios_autorizados: roomData.cantidad_servicios_autorizados ? parseInt(roomData.cantidad_servicios_autorizados) : null,
-          numero_contacto: roomData.numero_contacto || null,
-          correo: roomData.correo || null,
-          hora_cita: roomData.hora_cita || null,
-          fecha_check_in: roomData.fecha_check_in || null,
-          fecha_check_out: roomData.fecha_check_out || null,
-          hotel_asignado: roomData.hotel_asignado || null,
-          observaciones: roomData.observaciones || null,
-          requiere_acompañante: roomData.requiere_acompañante || false,
+          cantidad_servicios_autorizados: typeof roomData.cantidad_servicios_autorizados === 'number' ? roomData.cantidad_servicios_autorizados : (roomData.cantidad_servicios_autorizados ? parseInt(String(roomData.cantidad_servicios_autorizados)) : null),
+          numero_contacto: typeof roomData.numero_contacto === 'number' ? roomData.numero_contacto : (roomData.numero_contacto ? parseInt(String(roomData.numero_contacto)) : null),
+          correo: String(roomData.correo || '') || null,
+          hora_cita: String(roomData.hora_cita || '') || null,
+          fecha_check_in: String(roomData.fecha_check_in || '') || null,
+          fecha_check_out: String(roomData.fecha_check_out || '') || null,
+          hotel_asignado: String(roomData.hotel_asignado || '') || null,
+          observaciones: String(roomData.observaciones || '') || null,
+          requiere_acompañante: Boolean(roomData.requiere_acompañante),
           
           // Campos del acompañante (solo si se requiere)
-          tipo_documento_acompañante: roomData.requiere_acompañante ? roomData.tipo_documento_acompañante : null,
-          numero_documento_acompañante: roomData.requiere_acompañante ? roomData.numero_documento_acompañante : null,
-          apellidos_y_nombres_acompañante: roomData.requiere_acompañante ? roomData.apellidos_y_nombres_acompañante : null,
-          parentesco_acompañante: roomData.requiere_acompañante ? roomData.parentesco_acompañante : null,
+          tipo_documento_acompañante: roomData.requiere_acompañante ? String(roomData.tipo_documento_acompañante || '') : null,
+          numero_documento_acompañante: roomData.requiere_acompañante ? String(roomData.numero_documento_acompañante || '') : null,
+          apellidos_y_nombres_acompañante: roomData.requiere_acompañante ? String(roomData.apellidos_y_nombres_acompañante || '') : null,
+          parentesco_acompañante: roomData.requiere_acompañante ? String(roomData.parentesco_acompañante || '') : null,
         };
         
         dataToInsert.push(insertData);
@@ -225,11 +225,11 @@ export default function BookingPage() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {rooms.map((room, index) => (
             <RoomForm 
-              key={room.uniqueId}
+              key={room.id}
               room={room}
               roomIndex={index}
-              formData={formData[room.uniqueId] || {}}
-              onInputChange={(field, value) => handleInputChange(room.uniqueId, field, value)}
+              formData={formData[room.id] || {}}
+              onInputChange={(field, value) => handleInputChange(room.id, field, value)}
               errors={errors}
             />
           ))}
@@ -286,7 +286,7 @@ export default function BookingPage() {
 interface RoomFormProps {
   room: { id: string; name: string; price: number };
   roomIndex: number;
-  formData: {[key: string]: {[key: string]: string | number | boolean}};
+  formData: {[key: string]: string | number | boolean};
   onInputChange: (field: string, value: string | number | boolean) => void;
   errors: {[key: string]: string};
 }
@@ -294,7 +294,7 @@ interface RoomFormProps {
 function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomFormProps) {
   const [isAccompanimentExpanded, setIsAccompanimentExpanded] = useState(false);
   
-  const getFieldError = (field: string) => errors[`${room.uniqueId}_${field}`];
+  const getFieldError = (field: string) => errors[`${room.id}_${field}`];
   
   const getInputClassName = (field: string) => {
     const hasError = getFieldError(field);
@@ -315,10 +315,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
             <div>
               <h3 className="text-lg font-semibold text-gray-900">{room.name}</h3>
               <p className="text-sm text-gray-600">
-                {room.guestConfig 
-                  ? `${room.guestConfig.adults + room.guestConfig.children + room.guestConfig.babies} huésped${room.guestConfig.adults + room.guestConfig.children + room.guestConfig.babies !== 1 ? 'es' : ''}`
-                  : '2 huéspedes'
-                }
+                2 huéspedes
               </p>
             </div>
           </div>
@@ -343,10 +340,10 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <div className="relative">
                 <select
-                  value={formData.tipo_documento_paciente || ''}
+                  value={String(formData.tipo_documento_paciente || '')}
                   onChange={(e) => onInputChange('tipo_documento_paciente', e.target.value)}
                   className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white ${
-                    errors[`${room.uniqueId}_tipo_documento_paciente`] 
+                    errors[`${room.id}_tipo_documento_paciente`] 
                       ? 'border-red-500 bg-red-50' 
                       : 'border-gray-300'
                   }`}
@@ -365,8 +362,8 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                   </svg>
                 </div>
               </div>
-              {errors[`${room.uniqueId}_tipo_documento_paciente`] && (
-                <p className="mt-1 text-sm text-red-600">{errors[`${room.uniqueId}_tipo_documento_paciente`]}</p>
+              {errors[`${room.id}_tipo_documento_paciente`] && (
+                <p className="mt-1 text-sm text-red-600">{errors[`${room.id}_tipo_documento_paciente`]}</p>
               )}
             </div>
 
@@ -376,7 +373,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="text"
-                value={formData.numero_documento_paciente || ''}
+                value={String(formData.numero_documento_paciente || '')}
                 onChange={(e) => onInputChange('numero_documento_paciente', e.target.value)}
                 className={getInputClassName('numero_documento_paciente')}
                 required
@@ -392,7 +389,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="text"
-                value={formData.apellidos_y_nombres_paciente || ''}
+                value={String(formData.apellidos_y_nombres_paciente || '')}
                 onChange={(e) => onInputChange('apellidos_y_nombres_paciente', e.target.value)}
                 className={getInputClassName('apellidos_y_nombres_paciente')}
                 required
@@ -408,7 +405,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="number"
-                value={formData.edad_paciente || ''}
+                value={String(formData.edad_paciente || '')}
                 onChange={(e) => onInputChange('edad_paciente', e.target.value)}
                 className={getInputClassName('edad_paciente')}
                 required
@@ -425,7 +422,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                 Régimen *
               </label>
               <select
-                value={formData.regimen || ''}
+                value={String(formData.regimen || '')}
                 onChange={(e) => onInputChange('regimen', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
@@ -443,7 +440,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="text"
-                value={formData.descripcion_servicio || ''}
+                value={String(formData.descripcion_servicio || '')}
                 onChange={(e) => onInputChange('descripcion_servicio', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
@@ -456,7 +453,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="text"
-                value={formData.destino || ''}
+                value={String(formData.destino || '')}
                 onChange={(e) => onInputChange('destino', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
@@ -469,7 +466,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="text"
-                value={formData.numero_autorizacion || ''}
+                value={String(formData.numero_autorizacion || '')}
                 onChange={(e) => onInputChange('numero_autorizacion', e.target.value)}
                 className={getInputClassName('numero_autorizacion')}
                 required
@@ -485,7 +482,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="number"
-                value={formData.cantidad_servicios_autorizados || ''}
+                value={String(formData.cantidad_servicios_autorizados || '')}
                 onChange={(e) => onInputChange('cantidad_servicios_autorizados', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -497,7 +494,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="tel"
-                value={formData.numero_contacto || ''}
+                value={String(formData.numero_contacto || '')}
                 onChange={(e) => onInputChange('numero_contacto', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -509,7 +506,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="email"
-                value={formData.correo || ''}
+                value={String(formData.correo || '')}
                 onChange={(e) => onInputChange('correo', e.target.value)}
                 className={getInputClassName('correo')}
               />
@@ -524,7 +521,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="date"
-                value={formData.fecha_cita || ''}
+                value={String(formData.fecha_cita || '')}
                 onChange={(e) => onInputChange('fecha_cita', e.target.value)}
                 className={getInputClassName('fecha_cita')}
                 required
@@ -540,7 +537,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="time"
-                value={formData.hora_cita || ''}
+                value={String(formData.hora_cita || '')}
                 onChange={(e) => onInputChange('hora_cita', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -552,7 +549,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="date"
-                value={formData.fecha_check_in || ''}
+                value={String(formData.fecha_check_in || '')}
                 onChange={(e) => onInputChange('fecha_check_in', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -564,7 +561,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="date"
-                value={formData.fecha_check_out || ''}
+                value={String(formData.fecha_check_out || '')}
                 onChange={(e) => onInputChange('fecha_check_out', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -576,7 +573,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               </label>
               <input
                 type="text"
-                value={formData.hotel_asignado || ''}
+                value={String(formData.hotel_asignado || '')}
                 onChange={(e) => onInputChange('hotel_asignado', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -587,7 +584,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                 Observaciones
               </label>
               <textarea
-                value={formData.observaciones || ''}
+                value={String(formData.observaciones || '')}
                 onChange={(e) => onInputChange('observaciones', e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -606,7 +603,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.requiere_acompañante || false}
+                checked={Boolean(formData.requiere_acompañante)}
                 onChange={(e) => {
                   onInputChange('requiere_acompañante', e.target.checked);
                   if (!e.target.checked) {
@@ -651,7 +648,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                     Tipo de Documento del Acompañante
                   </label>
                   <select
-                    value={formData.tipo_documento_acompañante || ''}
+                    value={String(formData.tipo_documento_acompañante || '')}
                     onChange={(e) => onInputChange('tipo_documento_acompañante', e.target.value)}
                     className={getInputClassName('tipo_documento_acompañante')}
                   >
@@ -672,7 +669,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                   </label>
                   <input
                     type="text"
-                    value={formData.numero_documento_acompañante || ''}
+                    value={String(formData.numero_documento_acompañante || '')}
                     onChange={(e) => onInputChange('numero_documento_acompañante', e.target.value)}
                     className={getInputClassName('numero_documento_acompañante')}
                   />
@@ -687,7 +684,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                   </label>
                   <input
                     type="text"
-                    value={formData.apellidos_y_nombres_acompañante || ''}
+                    value={String(formData.apellidos_y_nombres_acompañante || '')}
                     onChange={(e) => onInputChange('apellidos_y_nombres_acompañante', e.target.value)}
                     className={getInputClassName('apellidos_y_nombres_acompañante')}
                   />
@@ -701,7 +698,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                     Parentesco con el Acompañante
                   </label>
                   <select
-                    value={formData.parentesco_acompañante || ''}
+                    value={String(formData.parentesco_acompañante || '')}
                     onChange={(e) => onInputChange('parentesco_acompañante', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
