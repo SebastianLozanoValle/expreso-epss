@@ -144,6 +144,9 @@ export default function BookingPage() {
         
         // Crear objeto con solo los campos que tienen valor
         const insertData: TablesInsert<'informs'> = {
+          // Campo obligatorio: user_id del usuario logueado
+          user_id: user?.id,
+          
           // Campos obligatorios
           tipo_documento_paciente: roomData.tipo_documento_paciente,
           numero_documento_paciente: roomData.numero_documento_paciente,
@@ -192,7 +195,8 @@ export default function BookingPage() {
       
     } catch (error) {
       console.error('Error al procesar la reserva:', error);
-      alert(`Error al procesar la reserva: ${error.message || 'Error desconocido'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      alert(`Error al procesar la reserva: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -337,22 +341,30 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de Documento *
               </label>
-              <select
-                value={formData.tipo_documento_paciente || ''}
-                onChange={(e) => onInputChange('tipo_documento_paciente', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors[`${room.uniqueId}_tipo_documento_paciente`] 
-                    ? 'border-red-500 bg-red-50' 
-                    : 'border-gray-300'
-                }`}
-                required
-              >
-                <option value="">Seleccionar...</option>
-                <option value="CC">Cédula de Ciudadanía</option>
-                <option value="TI">Tarjeta de Identidad</option>
-                <option value="CE">Cédula de Extranjería</option>
-                <option value="PA">Pasaporte</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={formData.tipo_documento_paciente || ''}
+                  onChange={(e) => onInputChange('tipo_documento_paciente', e.target.value)}
+                  className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white ${
+                    errors[`${room.uniqueId}_tipo_documento_paciente`] 
+                      ? 'border-red-500 bg-red-50' 
+                      : 'border-gray-300'
+                  }`}
+                  required
+                >
+                  <option value="" disabled>Seleccionar...</option>
+                  <option value="CC">Cédula de Ciudadanía</option>
+                  <option value="TI">Tarjeta de Identidad</option>
+                  <option value="CE">Cédula de Extranjería</option>
+                  <option value="PA">Pasaporte</option>
+                </select>
+                {/* Icono de dropdown personalizado */}
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
               {errors[`${room.uniqueId}_tipo_documento_paciente`] && (
                 <p className="mt-1 text-sm text-red-600">{errors[`${room.uniqueId}_tipo_documento_paciente`]}</p>
               )}

@@ -342,13 +342,7 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between border-t border-gray-200 pt-4">
-          <button
-            onClick={addRoom}
-            className="px-4 py-2 text-sm font-semibold text-blue-700 border-2 border-blue-500 bg-blue-50 rounded-lg hover:bg-blue-100 hover:border-blue-600 transition-colors shadow-sm"
-          >
-            + Añadir habitación
-          </button>
+        <div className="flex justify-end border-t border-gray-200 pt-4">
           <button
             onClick={handleConfirm}
             className="px-6 py-2 text-sm font-semibold text-white bg-green-600 border-2 border-green-600 rounded-lg hover:bg-green-700 hover:border-green-700 transition-colors shadow-md"

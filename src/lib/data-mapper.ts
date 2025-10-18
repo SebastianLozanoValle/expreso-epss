@@ -1,9 +1,10 @@
-import { TablesInsert } from '@/types/supabase'
+import { TablesInsert, Tables } from '@/types/supabase'
+import { supabase } from './supabase'
 
 // Mapeo de columnas de entrada a campos de la tabla informs
 export const COLUMN_MAPPING = {
   'TIPO DOCUMENTO PACIENTE': 'tipo_documento_paciente',
-  'NÚMERO DOCUMENTO PACIENTE': 'numero_documento_paciente', 
+  'N�MERO DOCUMENTO PACIENTE': 'numero_documento_paciente', 
   'APELLIDOS Y NOMBRES PACIENTE': 'apellidos_y_nombres_paciente',
   'EDAD PACIENTE': 'edad_paciente',
   'REGIMEN': 'regimen',
@@ -12,17 +13,16 @@ export const COLUMN_MAPPING = {
   'No. DE AUTORIZACION': 'numero_autorizacion',
   'No DE AUTORIZACION': 'numero_autorizacion',
   'CANTIDAD SERVICIOS AUTORIZADOS': 'cantidad_servicios_autorizados',
-  'NÚMERO DE CONTACTO': 'numero_contacto',
-  'REQUIERE ACOMPAÑANTE': 'requiere_acompañante',
-  'TIPO IDENTIFICACION ACOMPAÑANTE': 'tipo_documento_acompañante',
-  'NÚMERO IDENTIFICACION ACOMPAÑANTE': 'numero_documento_',
+  'N�MERO DE CONTACTO': 'numero_contacto',
+  'REQUIERE ACOMPA�ANTE': 'requiere_acompañante',
+  'TIPO IDENTIFICACION ACOMPA�ANTE': 'tipo_documento_acompañante',
+  'N�MERO IDENTIFICACION ACOMPA�ANTE': 'numero_documento_acompañante',
   'APELLIDOS Y NOMBRES': 'apellidos_y_nombres_acompañante',
-  'APELLIDOS Y NOMBRES PACIENTE': 'apellidos_y_nombres_paciente',
-  'PARENTESCO ACOMPAÑANTE': 'parentesco_acompañante',
+  'PARENTESCO ACOMPA�ANTE': 'parentesco_acompañante',
   'FECHA DE CITA': 'fecha_cita',
   'HORA CITA': 'hora_cita',
   'FECHA DE ULTIMA CITA': 'fecha_ultima_cita',
-  'HORA ÚLTIMA CITA': 'hora_ultima_cita',
+  'HORA �LTIMA CITA': 'hora_ultima_cita',
   'POS/NO POS': 'POS',
   'MIPRES': 'MIPRES',
   'FECHA DE CHECK IN': 'fecha_check_in',
@@ -35,7 +35,8 @@ export const COLUMN_MAPPING = {
 // Función para transformar datos de CSV a formato de tabla informs
 export function transformCsvDataToInforms(
   csvData: string[][], 
-  headers: string[]
+  headers: string[],
+  userId?: string
 ): TablesInsert<'informs'>[] {
   const transformedData: TablesInsert<'informs'>[] = []
   
@@ -90,7 +91,10 @@ export function transformCsvDataToInforms(
   
   // Procesar cada fila de datos
   csvData.forEach((row, rowIndex) => {
-    const transformedRow: TablesInsert<'informs'> = {}
+    const transformedRow: any = {
+      // Campo obligatorio: user_id del usuario logueado
+      user_id: userId,
+    }
     
     // Mapear cada campo
     Object.entries(columnIndices).forEach(([fieldName, columnIndex]) => {
@@ -321,4 +325,219 @@ export function generateCsvTemplate(): string {
   ]
   
   return [headers.join(','), sampleData.join(',')].join('\n')
+}
+
+// Tipos para validación
+export interface ValidationResult {
+  valid: TablesInsert<'informs'>[]
+  rejected: {
+    row: number
+    data: TablesInsert<'informs'>
+    reasons: string[]
+    authorizationNumber: string
+  }[]
+}
+
+// Función para validar datos con verificaciones avanzadas
+export async function validateDataWithAdvancedChecks(
+  data: TablesInsert<'informs'>[]
+): Promise<ValidationResult> {
+  const valid: TablesInsert<'informs'>[] = []
+  const rejected: ValidationResult['rejected'] = []
+  
+  // 1. Verificar números de autorización duplicados en el lote actual
+  const authorizationNumbers = new Set<string>()
+  
+  // 2. Verificar números de autorización existentes en la base de datos
+  const existingAuthorizations = await getExistingAuthorizationNumbers()
+  
+  // 3. Verificar disponibilidad de hoteles
+  const hotelAvailability = await getHotelAvailabilityData()
+  
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i]
+    const reasons: string[] = []
+    
+    // Validar número de autorización
+    if (!row.numero_autorizacion) {
+      reasons.push('Número de autorización faltante')
+    } else {
+      // Verificar duplicados en el lote actual
+      if (authorizationNumbers.has(row.numero_autorizacion)) {
+        reasons.push('Número de autorización duplicado en el lote actual')
+      } else {
+        authorizationNumbers.add(row.numero_autorizacion)
+        
+        // Verificar duplicados en la base de datos
+        if (existingAuthorizations.has(row.numero_autorizacion)) {
+          reasons.push('Número de autorización ya existe en la base de datos')
+        }
+      }
+    }
+    
+    // Validar disponibilidad del hotel
+    if (row.hotel_asignado && row.fecha_check_in) {
+      const hotelAvailability = await checkHotelAvailability(
+        row.hotel_asignado,
+        row.fecha_check_in,
+        row.fecha_check_out || undefined
+      )
+      
+      if (!hotelAvailability.available) {
+        reasons.push(`Hotel no disponible: ${hotelAvailability.reason}`)
+      }
+    }
+    
+    // Validaciones básicas
+    if (!row.apellidos_y_nombres_paciente) {
+      reasons.push('Apellidos y nombres del paciente faltante')
+    }
+    
+    if (!row.tipo_documento_paciente) {
+      reasons.push('Tipo de documento del paciente faltante')
+    }
+    
+    if (!row.numero_documento_paciente) {
+      reasons.push('Número de documento del paciente faltante')
+    }
+    
+    if (reasons.length > 0) {
+      rejected.push({
+        row: i + 1,
+        data: row,
+        reasons,
+        authorizationNumber: row.numero_autorizacion || 'Sin número'
+      })
+    } else {
+      valid.push(row)
+    }
+  }
+  
+  return { valid, rejected }
+}
+
+// Función para obtener números de autorización existentes
+async function getExistingAuthorizationNumbers(): Promise<Set<string>> {
+  try {
+    const { data, error } = await supabase
+      .from('informs')
+      .select('numero_autorizacion')
+    
+    if (error) {
+      console.error('Error al obtener autorizaciones existentes:', error)
+      return new Set()
+    }
+    
+    return new Set(data.map(item => item.numero_autorizacion))
+  } catch (error) {
+    console.error('Error al consultar autorizaciones:', error)
+    return new Set()
+  }
+}
+
+// Función para obtener datos de disponibilidad de hoteles
+async function getHotelAvailabilityData(): Promise<Tables<'proyeccion_ocupacion'>[]> {
+  try {
+    const { data, error } = await supabase
+      .from('proyeccion_ocupacion')
+      .select('*')
+      .order('Fecha', { ascending: true })
+    
+    if (error) {
+      console.error('Error al obtener disponibilidad de hoteles:', error)
+      return []
+    }
+    
+    return data || []
+  } catch (error) {
+    console.error('Error al consultar disponibilidad:', error)
+    return []
+  }
+}
+
+// Función para verificar disponibilidad de un hotel específico
+async function checkHotelAvailability(
+  hotelName: string,
+  checkInDate: string,
+  checkOutDate?: string
+): Promise<{ available: boolean; reason: string }> {
+  try {
+    // Buscar datos de disponibilidad para el hotel y fecha
+    const { data, error } = await supabase
+      .from('proyeccion_ocupacion')
+      .select('*')
+      .eq('Hotel', hotelName)
+      .eq('Fecha', checkInDate)
+    
+    if (error) {
+      return { available: false, reason: 'Error al consultar disponibilidad' }
+    }
+    
+    if (!data || data.length === 0) {
+      return { available: false, reason: 'No hay datos de disponibilidad para este hotel y fecha' }
+    }
+    
+    const availability = data[0]
+    
+    // Verificar si hay disponibilidad (asumiendo que hay campos de disponibilidad)
+    const disponibilidad = availability['Disponibilidad']
+    const porcentajeDisponibilidad = availability['% Disponibilidad']
+    
+    if (disponibilidad === '0' || disponibilidad === '0.00') {
+      return { available: false, reason: 'Hotel sin disponibilidad para esta fecha' }
+    }
+    
+    if (porcentajeDisponibilidad && parseFloat(porcentajeDisponibilidad) <= 0) {
+      return { available: false, reason: 'Hotel sin disponibilidad (0% disponible)' }
+    }
+    
+    return { available: true, reason: 'Hotel disponible' }
+  } catch (error) {
+    console.error('Error al verificar disponibilidad:', error)
+    return { available: false, reason: 'Error al verificar disponibilidad' }
+  }
+}
+
+// Función para generar archivo de rechazos en formato JSON
+export function generateRejectedDataJson(rejected: ValidationResult['rejected']): string {
+  const rejectedData = {
+    timestamp: new Date().toISOString(),
+    totalRejected: rejected.length,
+    rejectedRecords: rejected.map(item => ({
+      row: item.row,
+      authorizationNumber: item.authorizationNumber,
+      reasons: item.reasons,
+      patientName: item.data.apellidos_y_nombres_paciente,
+      hotel: item.data.hotel_asignado,
+      checkInDate: item.data.fecha_check_in,
+      checkOutDate: item.data.fecha_check_out
+    }))
+  }
+  
+  return JSON.stringify(rejectedData, null, 2)
+}
+
+// Función para generar archivo de rechazos en formato CSV
+export function generateRejectedDataCsv(rejected: ValidationResult['rejected']): string {
+  const headers = [
+    'Fila',
+    'Numero_Autorizacion',
+    'Motivos_Rechazo',
+    'Nombre_Paciente',
+    'Hotel',
+    'Fecha_Check_In',
+    'Fecha_Check_Out'
+  ]
+  
+  const rows = rejected.map(item => [
+    item.row.toString(),
+    item.authorizationNumber,
+    item.reasons.join('; '),
+    item.data.apellidos_y_nombres_paciente || '',
+    item.data.hotel_asignado || '',
+    item.data.fecha_check_in || '',
+    item.data.fecha_check_out || ''
+  ])
+  
+  return [headers.join(','), ...rows.map(row => row.join(','))].join('\n')
 }

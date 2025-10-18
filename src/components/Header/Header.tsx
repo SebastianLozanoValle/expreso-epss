@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/auth-store'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Header() {
   const [selectedHotel, setSelectedHotel] = useState('')
@@ -11,9 +12,9 @@ export default function Header() {
   const { user, signOut } = useAuthStore()
 
   const hotels = [
-    { id: 'saana-45', name: 'Hotel Saana 45' },
-    { id: 'boulevar-rio', name: 'Hotel Boulevar del Rio' },
-    { id: 'ilar-corferias', name: 'Hotel Ilar Corferias' }
+    { id: 'medellin', name: 'Hotel Medellín' },
+    { id: 'cali', name: 'Hotel Cali' },
+    { id: 'bogota', name: 'Hotel Bogotá' }
   ]
 
   const handleHotelChange = (hotelId: string) => {
@@ -35,7 +36,7 @@ export default function Header() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="text-2xl font-bold text-gray-900">
-              Expreso Viajes y Turismo
+              <Image src="/expreso-viajes-y-turismo.jpg" alt="Logo" width={160} height={160} />
             </Link>
           </div>
 
