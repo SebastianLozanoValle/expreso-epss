@@ -18,13 +18,13 @@ interface Room {
   babies: number;
 }
 
-export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerRef }: GuestSelectorProps) {
+export default function GuestSelector({ isOpen, onClose, triggerRef }: GuestSelectorProps) {
   const [rooms, setRooms] = useState<Room[]>([
     { id: 1, adults: 2, children: 0, babies: 0 },
   ]);
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+  // const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const selectorRef = useRef<HTMLDivElement>(null);
-  const { rooms: cartRooms, getLinkedRoomsCount, updateRoomPrice } = useCart();
+  const { rooms: cartRooms, getLinkedRoomsCount } = useCart();
 
   // Calcular posición del popover
   useEffect(() => {

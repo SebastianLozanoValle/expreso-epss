@@ -91,7 +91,7 @@ export function transformCsvDataToInforms(
   
   // Procesar cada fila de datos
   csvData.forEach((row, rowIndex) => {
-    const transformedRow: any = {
+    const transformedRow: {[key: string]: string | number | boolean | null} = {
       // Campo obligatorio: user_id del usuario logueado
       user_id: userId,
     }

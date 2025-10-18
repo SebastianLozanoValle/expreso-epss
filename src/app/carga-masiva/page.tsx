@@ -3,9 +3,9 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { TablesInsert } from '@/types/supabase';
 import { supabase } from '@/lib/supabase';
 import { transformCsvDataToInforms, generateCsvTemplate } from '@/lib/data-mapper';
-import { TablesInsert } from '@/types/supabase';
 
 export default function CargaMasivaPage() {
   const router = useRouter();
@@ -141,7 +141,7 @@ export default function CargaMasivaPage() {
     try {
       // Usar datos transformados si existen, sino usar datos originales
       const dataToUpload = transformedData.length > 0 ? transformedData : fileData.map(row => {
-        const rowData: any = {
+        const rowData: {[key: string]: string | number | boolean | null} = {
           user_id: user?.id || '',
         };
         
@@ -186,7 +186,7 @@ export default function CargaMasivaPage() {
       // Intentar insertar todos los registros
         const { error } = await supabase
         .from('informs')
-        .insert(dataToUpload);
+        .insert(dataToUpload as TablesInsert<'informs'>[]);
       
       if (error) {
         // Analizar el error de Supabase
@@ -196,8 +196,8 @@ export default function CargaMasivaPage() {
         if (error.code === '23505' || error.message.includes('duplicate') || error.message.includes('constraint')) {
           addLog('🔄 Intentando insertar registros uno por uno para identificar errores específicos...');
           
-        let successCount = 0;
-        let errorCount = 0;
+        // let successCount = 0;
+        // let errorCount = 0;
           const successRecords: { numero_autorizacion: string; paciente: string }[] = [];
           const failedRecords: { numero_autorizacion: string; paciente: string; error: string }[] = [];
           
@@ -206,10 +206,10 @@ export default function CargaMasivaPage() {
             try {
               const { error: singleError } = await supabase
                 .from('informs')
-                .insert([record]);
+                .insert([record as TablesInsert<'informs'>]);
               
               if (singleError) {
-                errorCount++;
+                // errorCount++;
                 // Traducir errores técnicos a mensajes comprensibles
                 let errorMessage = singleError.message;
                 
@@ -230,15 +230,15 @@ export default function CargaMasivaPage() {
                 }
                 
                 failedRecords.push({
-                  numero_autorizacion: record.numero_autorizacion || 'Sin número',
-                  paciente: record.apellidos_y_nombres_paciente || 'Sin nombre',
+                  numero_autorizacion: String(record.numero_autorizacion || 'Sin número'),
+                  paciente: String(record.apellidos_y_nombres_paciente || 'Sin nombre'),
                   error: errorMessage
                 });
               } else {
-                successCount++;
+                // successCount++;
                 successRecords.push({
-                  numero_autorizacion: record.numero_autorizacion || 'Sin número',
-                  paciente: record.apellidos_y_nombres_paciente || 'Sin nombre'
+                  numero_autorizacion: String(record.numero_autorizacion || 'Sin número'),
+                  paciente: String(record.apellidos_y_nombres_paciente || 'Sin nombre')
                 });
               }
             } catch (singleError) {
@@ -267,8 +267,8 @@ export default function CargaMasivaPage() {
               }
               
               failedRecords.push({
-                numero_autorizacion: record.numero_autorizacion || 'Sin número',
-                paciente: record.apellidos_y_nombres_paciente || 'Sin nombre',
+                numero_autorizacion: String(record.numero_autorizacion || 'Sin número'),
+                paciente: String(record.apellidos_y_nombres_paciente || 'Sin nombre'),
                 error: errorMessage
               });
             }
@@ -286,8 +286,8 @@ export default function CargaMasivaPage() {
       } else {
         // Todos los registros se insertaron correctamente
         const successRecords = dataToUpload.map(record => ({
-          numero_autorizacion: record.numero_autorizacion || 'Sin número',
-          paciente: record.apellidos_y_nombres_paciente || 'Sin nombre'
+          numero_autorizacion: String(record.numero_autorizacion || 'Sin número'),
+          paciente: String(record.apellidos_y_nombres_paciente || 'Sin nombre')
         }));
         
         setUploadResults({
@@ -515,7 +515,7 @@ export default function CargaMasivaPage() {
                             <td className="border border-gray-300 px-2 py-2 text-sm text-gray-900 font-medium sticky left-0 bg-white z-10">
                               {rowIndex + 1}
                             </td>
-                            {Object.entries(row).map(([key, value], cellIndex) => (
+                            {Object.entries(row).map(([, value], cellIndex) => (
                               <td key={cellIndex} className="border border-gray-300 px-2 py-2 text-sm text-gray-900 max-w-32 truncate" title={String(value || '')}>
                                 {value !== null && value !== undefined ? String(value) : '-'}
                               </td>

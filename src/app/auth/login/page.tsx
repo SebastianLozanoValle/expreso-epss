@@ -39,7 +39,7 @@ export default function LoginPage() {
       } else if (isSignUp) {
         setError('Revisa tu correo para confirmar tu cuenta')
       }
-    } catch (err) {
+      } catch {
       setError('Ocurrió un error inesperado')
     } finally {
       setLoading(false)

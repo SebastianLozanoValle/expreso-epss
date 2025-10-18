@@ -40,7 +40,7 @@ export default function DisponibilidadPage() {
 
   useEffect(() => {
     loadRoomsData();
-  }, [searchParams]);
+  }, [searchParams, loadRoomsData]);
 
   const handleAddToCart = (room: Room) => {
     addRoom({

@@ -1,10 +1,10 @@
-'use client
+'use client';
 import { useEffect, useState } from 'react'
 import api from '@/app/lib/axios'
 import { useCart } from '@/cart/cart'
 
 export default function RoomDetail({ id }: { id: string }) {
-    const [room, setRoom] = useState<any>(null)
+    const [room, setRoom] = useState<{id: string; name: string; price: number; image: string; capacity: number; hotel: string} | null>(null)
     const [loading, setLoading] = useState(true)
     const addItem = useCart(s => s.addRoom)
 
