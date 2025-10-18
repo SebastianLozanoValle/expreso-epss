@@ -118,7 +118,7 @@ export default function Header() {
             ) : (
               <button
                 onClick={() => router.push('/auth/login')}
-                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-sm"
               >
                 Iniciar Sesión
               </button>

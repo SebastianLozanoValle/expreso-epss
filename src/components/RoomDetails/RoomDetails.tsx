@@ -6,109 +6,106 @@ import RoomInfoModal from '@/components/RoomInfoModal/RoomInfoModal';
 interface RoomDetailsProps {
   selectedRate: string;
   onRateSelect: (rate: string) => void;
+  selectedCity?: string;
 }
 
-export default function RoomDetails({ selectedRate, onRateSelect }: RoomDetailsProps) {
+export default function RoomDetails({ selectedRate, onRateSelect, selectedCity = 'Bogotá' }: RoomDetailsProps) {
   const { addRoomAutoLink } = useCart();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalRoomType, setModalRoomType] = useState('');
   const [modalPrice, setModalPrice] = useState(0);
   const [modalRateType, setModalRateType] = useState('');
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Resetear índice de imagen cuando cambie la habitación
-  useEffect(() => {
-    setCurrentImageIndex(0);
-  }, [selectedRate]);
-
-  // Datos de las habitaciones - preparado para API
-  const rooms = [
-    {
-      id: 'doble',
-      name: 'Doble',
-      image: 'Habitación Doble',
-      images: [
-        '/hotel.jpg',
-        '/hotel.jpg',
-        '/hotel.jpg',
-        '/hotel.jpg'
-      ],
-      capacity: 'Capacidad para 4',
-      bed: '1 cama individual',
-      bathroom: '1 baño',
-      features: [
-        'Vista a la ciudad',
-        'Sillas de comedor',
-        'Armarios en la habitación',
-        'Microondas',
-        'Secador de pelo',
-        'Escritorio',
-        'Ropa de cama y toallas',
-        'Artículos de aseo gratuitos'
-      ],
-      rates: [
-        {
-          id: 'room-only',
-          name: 'Solo Habitación Tarifa Estándar',
-          price: 182000,
-          description: 'Precio para 1 noche, 2 huéspedes'
-        },
-        {
-          id: 'breakfast',
-          name: 'Desayuno Incluido Tarifa Estándar',
-          price: 202000,
-          description: 'Precio para 1 noche, 2 huéspedes'
-        }
-      ]
-    },
-    {
-      id: 'suite',
-      name: 'Suite',
-      image: 'Habitación Suite',
-      capacity: 'Capacidad para 4',
-      bed: '1 cama doble',
-      bathroom: '1 baño',
-      features: [
-        '25m²',
-        'Vista a la ciudad',
-        'TV',
-        'Microondas',
-        'Sillas de comedor',
-        'Artículos de aseo gratuitos',
-        'Ropa de cama y toallas',
-        'Secador de pelo'
-      ],
-      rates: [
-        {
-          id: 'suite-room-only',
-          name: 'Solo Habitación Tarifa Estándar',
-          price: 204000,
-          description: 'Precio para 1 noche, 2 huéspedes'
-        },
-        {
-          id: 'suite-breakfast',
-          name: 'Desayuno Incluido Tarifa Estándar',
-          price: 224000,
-          description: 'Precio para 1 noche, 2 huéspedes'
-        }
-      ]
+  // Función para obtener datos dinámicos basados en la ciudad
+  const getRoomData = (city: string) => {
+    let soloUsuario, usuarioAcompañante, acompañanteAdicional;
+    
+    switch (city) {
+      case 'Bogotá':
+        soloUsuario = 133256;
+        usuarioAcompañante = 199883;
+        acompañanteAdicional = 66628;
+        break;
+      case 'Medellín':
+        soloUsuario = 163841;
+        usuarioAcompañante = 245761;
+        acompañanteAdicional = 81920;
+        break;
+      case 'Cali':
+        soloUsuario = 182011;
+        usuarioAcompañante = 273017;
+        acompañanteAdicional = 91006;
+        break;
+      default:
+        soloUsuario = 133256;
+        usuarioAcompañante = 199883;
+        acompañanteAdicional = 66628;
     }
-  ];
+
+    return {
+      id: `habitacion-${city.toLowerCase()}`,
+      name: `Habitación - Estándar`,
+      image: 'Habitación',
+      images: [`/${city === 'Bogotá' ? 'bogota' : city === 'Medellín' ? 'medellin' : 'cali'}.webp`],
+      features: [
+        'Traslado aeropuerto/terminal - hotel (ida y regreso)',
+        'Alojamiento por noche',
+        '3 alimentaciones por día',
+        'Traslado interno redondo (usuario y acompañantes)'
+      ],
+      rates: [
+        {
+          id: 'solo-usuario',
+          name: 'Solo Usuario',
+          price: soloUsuario,
+          description: 'Precio para 1 huésped - Incluye: Traslado aeropuerto/terminal, alojamiento, 3 alimentaciones, traslado interno'
+        },
+        {
+          id: 'usuario-acompañante',
+          name: 'Usuario + Acompañante',
+          price: usuarioAcompañante,
+          description: 'Precio para 2 huéspedes - Incluye: Traslado aeropuerto/terminal, alojamiento, 3 alimentaciones, traslado interno'
+        },
+        {
+          id: 'usuario-dos-acompañantes',
+          name: 'Usuario + 2 Acompañantes',
+          price: usuarioAcompañante + acompañanteAdicional,
+          description: 'Precio para 3 huéspedes - Incluye: Traslado aeropuerto/terminal, alojamiento, 3 alimentaciones, traslado interno'
+        }
+      ]
+    };
+  };
+
+  const rooms = [getRoomData(selectedCity)];
 
   const handleAddToCart = (roomId: string, rateId: string) => {
     const room = rooms.find(r => r.id === roomId);
     const rate = room?.rates.find(r => r.id === rateId);
     if (room && rate) {
-      // Extraer capacidad del texto (ej: "Capacidad para 4" -> 4)
-      const capacityMatch = room.capacity.match(/\d+/);
-      const capacity = capacityMatch ? parseInt(capacityMatch[0]) : 4;
+      // Determinar cantidad de huéspedes basándose en el tipo de plan
+      let guests = 2; // Por defecto
+      if (rateId === 'solo-usuario') {
+        guests = 1;
+      } else if (rateId === 'usuario-acompañante') {
+        guests = 2;
+      } else if (rateId === 'usuario-dos-acompañantes') {
+        guests = 3;
+      }
+      
+      // Crear configuración de huéspedes basada en el plan
+      const guestConfig = {
+        adults: guests,
+        children: 0,
+        babies: 0
+      };
       
       addRoomAutoLink({
         id: `${roomId}-${rateId}`,
         name: `${room.name} - ${rate.name}`,
         price: rate.price,
-        basePrice: rate.price, // Precio base por 2 huéspedes
-        capacity: capacity
+        basePrice: rate.price,
+        capacity: 4,
+        guestConfig: guestConfig
       });
       onRateSelect(rateId);
     }
@@ -141,54 +138,17 @@ export default function RoomDetails({ selectedRate, onRateSelect }: RoomDetailsP
           {/* Room Header */}
           <div className="p-8">
             <div className="flex flex-col md:flex-row gap-8">
-              {/* Room Image Carousel */}
-              <div className="md:w-80 flex-shrink-0">
-                <div className="relative w-full h-56 rounded-2xl overflow-hidden">
-                  <img 
-                    src={room.images?.[currentImageIndex] || '/hotel.jpg'} 
-                    alt={room.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/20"></div>
-                  
-                  {/* Navigation arrows */}
-                  {room.images && room.images.length > 1 && (
-                    <>
-                      <button
-                        onClick={() => setCurrentImageIndex(prev => prev === 0 ? (room.images?.length || 1) - 1 : prev - 1)}
-                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm rounded-full p-2 hover:bg-white/30 transition-colors"
-                      >
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => setCurrentImageIndex(prev => prev === (room.images?.length || 1) - 1 ? 0 : prev + 1)}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm rounded-full p-2 hover:bg-white/30 transition-colors"
-                      >
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </>
-                  )}
-                  
-                  {/* Image indicators */}
-                  {room.images && room.images.length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                      {room.images.map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setCurrentImageIndex(index)}
-                          className={`w-2 h-2 rounded-full transition-colors ${
-                            index === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+               {/* Room Image */}
+               <div className="md:w-80 flex-shrink-0">
+                 <div className="relative w-full h-56 rounded-2xl overflow-hidden">
+                   <img 
+                     src={room.images[0]} 
+                     alt={room.name}
+                     className="w-full h-full object-cover"
+                   />
+                   <div className="absolute inset-0 bg-black/20"></div>
+                 </div>
+               </div>
 
               {/* Room Information */}
               <div className="flex-1">
@@ -196,26 +156,6 @@ export default function RoomDetails({ selectedRate, onRateSelect }: RoomDetailsP
                   <h2 className="text-3xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">{room.name}</h2>
                 </div>
                 
-                <div className="flex items-center space-x-6 mb-6 text-sm">
-                  <span className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-full">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    <span className="text-green-700 font-medium">{room.capacity}</span>
-                  </span>
-                  <span className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-full">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                    </svg>
-                    <span className="text-green-700 font-medium">{room.bed}</span>
-                  </span>
-                  <span className="flex items-center space-x-2 bg-purple-50 px-3 py-2 rounded-full">
-                    <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                    </svg>
-                    <span className="text-purple-700 font-medium">{room.bathroom}</span>
-                  </span>
-                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
                   {room.features.map((feature, index) => (
@@ -280,8 +220,8 @@ export default function RoomDetails({ selectedRate, onRateSelect }: RoomDetailsP
                     onClick={() => handleAddToCart(room.id, rate.id)}
                     className={`px-8 py-3 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
                       selectedRate === rate.id
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl'
-                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:shadow-lg'
+                        ? 'bg-gradient-to-r from-green-700 to-emerald-700 text-white shadow-lg hover:shadow-xl'
+                        : 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md hover:shadow-lg'
                     }`}
                   >
                     {selectedRate === rate.id ? '✓ Seleccionado' : 'Seleccionar'}

@@ -9,28 +9,28 @@ interface RoomCardProps {
 }
 
 export default function RoomCard({ room, onAddToCart }: RoomCardProps) {
-  const [selectedRate, setSelectedRate] = useState<'roomOnly' | 'breakfast' | 'allInclusive'>('roomOnly');
+  const [selectedRate, setSelectedRate] = useState<'soloUsuario' | 'usuarioAcompañante' | 'usuarioDosAcompañantes'>('soloUsuario');
   const [showDetails, setShowDetails] = useState(false);
 
   const getCurrentPrice = () => {
     switch (selectedRate) {
-      case 'breakfast':
-        return room.rates.breakfast;
-      case 'allInclusive':
-        return room.rates.allInclusive;
+      case 'usuarioAcompañante':
+        return room.rates.usuarioAcompañante;
+      case 'usuarioDosAcompañantes':
+        return room.rates.usuarioDosAcompañantes;
       default:
-        return room.rates.roomOnly;
+        return room.rates.soloUsuario;
     }
   };
 
   const getRateLabel = () => {
     switch (selectedRate) {
-      case 'breakfast':
-        return 'Con desayuno';
-      case 'allInclusive':
-        return 'Todo incluido';
+      case 'usuarioAcompañante':
+        return 'Usuario + Acompañante';
+      case 'usuarioDosAcompañantes':
+        return 'Usuario + 2 Acompañantes';
       default:
-        return 'Solo habitación';
+        return 'Solo Usuario';
     }
   };
 
@@ -115,34 +115,34 @@ export default function RoomCard({ room, onAddToCart }: RoomCardProps) {
           <div className="mb-4">
             <div className="flex space-x-2">
               <button
-                onClick={() => setSelectedRate('roomOnly')}
+                onClick={() => setSelectedRate('soloUsuario')}
                 className={`px-3 py-1 text-sm rounded ${
-                  selectedRate === 'roomOnly'
-                    ? 'bg-teal-600 text-white'
+                  selectedRate === 'soloUsuario'
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Solo habitación
+                Solo Usuario
               </button>
               <button
-                onClick={() => setSelectedRate('breakfast')}
+                onClick={() => setSelectedRate('usuarioAcompañante')}
                 className={`px-3 py-1 text-sm rounded ${
-                  selectedRate === 'breakfast'
-                    ? 'bg-teal-600 text-white'
+                  selectedRate === 'usuarioAcompañante'
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Con desayuno
+                Usuario + Acompañante
               </button>
               <button
-                onClick={() => setSelectedRate('allInclusive')}
+                onClick={() => setSelectedRate('usuarioDosAcompañantes')}
                 className={`px-3 py-1 text-sm rounded ${
-                  selectedRate === 'allInclusive'
-                    ? 'bg-teal-600 text-white'
+                  selectedRate === 'usuarioDosAcompañantes'
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Todo incluido
+                Usuario + 2 Acompañantes
               </button>
             </div>
           </div>
@@ -151,13 +151,13 @@ export default function RoomCard({ room, onAddToCart }: RoomCardProps) {
           <div className="flex justify-between items-center">
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="text-teal-600 hover:text-teal-700 text-sm font-medium"
+              className="text-green-600 hover:text-green-700 text-sm font-medium"
             >
               {showDetails ? 'Ocultar detalles' : 'Ver más detalles'}
             </button>
             <button
               onClick={onAddToCart}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-2 rounded-lg font-semibold transition-all duration-300"
             >
               Agregar al carrito
             </button>

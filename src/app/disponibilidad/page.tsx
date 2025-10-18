@@ -82,7 +82,7 @@ function DisponibilidadContent() {
           <p className="text-gray-600 mb-4">{error}</p>
           <button 
             onClick={() => window.location.reload()}
-            className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg"
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg transition-all duration-300"
           >
             Reintentar
           </button>
@@ -238,20 +238,20 @@ function getSampleData(): RoomsData {
     rooms: [
       {
         id: 'room-1',
-        name: 'Habitación Individual Estándar',
-        description: 'Habitación cómoda para una persona',
+        name: 'Habitación',
+        description: 'Habitación cómoda con todas las comodidades. Incluye: Traslado aeropuerto/terminal - hotel (ida y regreso), alojamiento por noche, 3 alimentaciones por día y traslado interno redondo (usuario y acompañantes)',
         price: 150000,
         currency: 'COP',
         image: '/images/room-1.jpg',
-        capacity: { adults: 1, children: 0, babies: 0 },
-        amenities: ['WiFi', 'Aire acondicionado', 'TV'],
-        size: '10m²',
+        capacity: { adults: 2, children: 2, babies: 0 },
+        amenities: ['WiFi', 'Aire acondicionado', 'TV', 'Minibar'],
+        size: '20m²',
         view: 'Vista a la ciudad',
-        bedType: '1 cama individual',
+        bedType: '1 cama doble',
         policies: {
-          refundable: false,
+          refundable: true,
           payLater: true,
-          cancellationPolicy: 'No reembolsable'
+          cancellationPolicy: 'Reembolsable hasta 24h antes'
         },
         availability: {
           available: true,
@@ -260,24 +260,24 @@ function getSampleData(): RoomsData {
           nights: 1
         },
         rates: {
-          roomOnly: 150000,
-          breakfast: 180000,
-          allInclusive: 220000
+          soloUsuario: 133256,
+          usuarioAcompañante: 199883,
+          usuarioDosAcompañantes: 266511
         },
         hotel: {
           id: 'hotel-1',
-          name: 'Hotel Saana 45',
-          location: 'Centro de la ciudad'
+          name: 'Hotel Medellín',
+          location: 'Centro de Medellín'
         }
       },
       {
         id: 'room-2',
-        name: 'Habitación Doble Superior',
-        description: 'Habitación amplia con vista panorámica',
-        price: 250000,
+        name: 'Habitación',
+        description: 'Habitación amplia con vista panorámica. Incluye: Traslado aeropuerto/terminal - hotel (ida y regreso), alojamiento por noche, 3 alimentaciones por día y traslado interno redondo (usuario y acompañantes)',
+        price: 150000,
         currency: 'COP',
         image: '/images/room-2.jpg',
-        capacity: { adults: 2, children: 1, babies: 0 },
+        capacity: { adults: 2, children: 2, babies: 0 },
         amenities: ['WiFi', 'Aire acondicionado', 'TV', 'Minibar', 'Balcón'],
         size: '20m²',
         view: 'Vista al río',
@@ -294,14 +294,14 @@ function getSampleData(): RoomsData {
           nights: 1
         },
         rates: {
-          roomOnly: 250000,
-          breakfast: 300000,
-          allInclusive: 380000
+          soloUsuario: 133256,
+          usuarioAcompañante: 199883,
+          usuarioDosAcompañantes: 266511
         },
         hotel: {
           id: 'hotel-2',
-          name: 'Hotel Boulevar del Rio',
-          location: 'Zona ribereña'
+          name: 'Hotel Cali',
+          location: 'Centro de Cali'
         }
       }
     ],

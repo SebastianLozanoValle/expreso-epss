@@ -221,7 +221,7 @@ export default function HotelPage() {
                   />
                 </div>
                 
-                <div className="flex-1 relative">
+                {/* <div className="flex-1 relative">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">👥 Habitaciones y huéspedes</label>
                   <div 
                     ref={guestButtonRef}
@@ -240,7 +240,7 @@ export default function HotelPage() {
                     onGuestSelect={handleGuestSelect}
                     triggerRef={guestButtonRef}
                   />
-                </div>
+                </div> */}
                 
               </div>
             </div>
@@ -284,7 +284,8 @@ export default function HotelPage() {
               </div>
               <RoomDetails 
                 selectedRate={selectedRate} 
-                onRateSelect={setSelectedRate} 
+                onRateSelect={setSelectedRate}
+                selectedCity={hotel.name.split(' ')[1]} // Extraer ciudad del nombre del hotel
               />
             </div>
             <div className="lg:col-span-1">

@@ -27,9 +27,9 @@ export interface Room {
     nights: number;
   };
   rates: {
-    roomOnly: number;
-    breakfast: number;
-    allInclusive: number;
+    soloUsuario: number;
+    usuarioAcompañante: number;
+    usuarioDosAcompañantes: number;
   };
   hotel: {
     id: string;

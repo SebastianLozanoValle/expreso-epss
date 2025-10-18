@@ -166,7 +166,7 @@ export default function RoomInfoModal({ isOpen, onClose, roomType, price, rateTy
             </div>
             <button 
               onClick={handleSelect}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold text-lg mb-2"
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-lg font-semibold text-lg mb-2 transition-all duration-300"
             >
               Seleccionar
             </button>

@@ -118,7 +118,7 @@ export default function DatePicker({ isOpen, onClose, onDateSelect, selectedRang
           </button>
           <button
             onClick={handleDone}
-            className="px-4 py-1 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-teal-500"
+            className="px-4 py-1 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-emerald-600 border border-transparent rounded-lg hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 transition-all duration-300"
           >
             Hecho
           </button>

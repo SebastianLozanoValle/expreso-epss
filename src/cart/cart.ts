@@ -96,14 +96,19 @@ export const useCart = create<CartState>()(
             const linkedRooms = state.rooms.filter(r => r.guestConfig)
             const nextConfigIndex = linkedRooms.length
             
-            // Usar habitaciones pre-configuradas del GuestSelector
+            // Si la habitación ya tiene guestConfig, usarla directamente
             let config;
-            if (nextConfigIndex < state.preConfiguredRooms.length) {
-                // Usar configuración pre-configurada del GuestSelector
-                config = state.preConfiguredRooms[nextConfigIndex]
+            if (room.guestConfig) {
+                config = room.guestConfig;
             } else {
-                // Si no hay más pre-configuradas, crear configuración por defecto
-                config = { adults: 2, children: 0, babies: 0 }
+                // Usar habitaciones pre-configuradas del GuestSelector
+                if (nextConfigIndex < state.preConfiguredRooms.length) {
+                    // Usar configuración pre-configurada del GuestSelector
+                    config = state.preConfiguredRooms[nextConfigIndex]
+                } else {
+                    // Si no hay más pre-configuradas, crear configuración por defecto
+                    config = { adults: 2, children: 0, babies: 0 }
+                }
             }
             
             // Calcular precio inicial basado en la configuración
@@ -134,15 +139,45 @@ export const useCart = create<CartState>()(
             // Contar habitaciones pre-configuradas
             return state.preConfiguredRooms.length
         },
-        calculatePriceForGuests: (basePrice, adults, children) => {
-            // Precio base es para 2 huéspedes
-            // Cada huésped adicional (adultos + niños) aumenta el precio en 20%
+        calculatePriceForGuests: (basePrice, adults, children, city = 'Bogotá') => {
+            // Precios específicos por ciudad
             const totalGuests = adults + children
-            const baseGuests = 2
-            const additionalGuests = Math.max(0, totalGuests - baseGuests)
-            const priceMultiplier = 1 + (additionalGuests * 0.2) // 20% por huésped adicional
             
-            return Math.round(basePrice * priceMultiplier)
+            let soloUsuario, usuarioAcompañante, acompañanteAdicional
+            
+            switch (city) {
+                case 'Bogotá':
+                    soloUsuario = 133256
+                    usuarioAcompañante = 199883
+                    acompañanteAdicional = 66628
+                    break
+                case 'Medellín':
+                    soloUsuario = 163841
+                    usuarioAcompañante = 245761
+                    acompañanteAdicional = 81920
+                    break
+                case 'Cali':
+                    soloUsuario = 182011
+                    usuarioAcompañante = 273017
+                    acompañanteAdicional = 91006
+                    break
+                default:
+                    soloUsuario = 133256
+                    usuarioAcompañante = 199883
+                    acompañanteAdicional = 66628
+            }
+            
+            if (totalGuests === 1) {
+                return soloUsuario
+            } else if (totalGuests === 2) {
+                return usuarioAcompañante
+            } else if (totalGuests === 3) {
+                return usuarioAcompañante + acompañanteAdicional
+            } else {
+                // Para más de 3 huéspedes
+                const additionalGuests = totalGuests - 3
+                return usuarioAcompañante + acompañanteAdicional + (acompañanteAdicional * additionalGuests)
+            }
         },
         updateRoomPrice: (uniqueId, guestConfig) => {
             set((state) => ({
