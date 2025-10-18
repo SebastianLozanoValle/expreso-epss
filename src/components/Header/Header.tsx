@@ -35,8 +35,27 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="text-2xl font-bold text-gray-900">
-              <Image src="/expreso-viajes-y-turismo.jpg" alt="Logo" width={160} height={160} />
+            <Link href="/" className="text-2xl font-bold text-gray-900 flex gap-2 items-center">
+              <div className="h-14 w-auto">
+                <Image 
+                  src="/hebrara.png" 
+                  alt="Logo Hebrara" 
+                  width={0}
+                  height={0}
+                  sizes="100vw"
+                  className="h-full w-auto object-contain"
+                />
+              </div>
+              <div className="h-14 w-auto">
+                <Image 
+                  src="/expreso-viajes-y-turismo.jpg" 
+                  alt="Logo Expreso Viajes" 
+                  width={0}
+                  height={0}
+                  sizes="100vw"
+                  className="h-full w-auto object-contain"
+                />
+              </div>
             </Link>
           </div>
 

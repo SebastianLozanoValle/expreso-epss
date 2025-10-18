@@ -65,6 +65,39 @@ export default function CargaMasivaPage() {
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
+  // Función para enviar email por cada registro
+  const sendEmailForRecord = async (record: any) => {
+    try {
+      addLog(`📧 Intentando enviar email para ${record.apellidos_y_nombres_paciente} (${record.numero_autorizacion})`);
+      
+      const response = await fetch('/api/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: user?.email || record.correo,
+          numeroAutorizacion: record.numero_autorizacion,
+          patientName: record.apellidos_y_nombres_paciente,
+        }),
+      });
+
+      const responseData = await response.json();
+      addLog(`📧 Respuesta del servidor: ${JSON.stringify(responseData)}`);
+
+      if (response.ok) {
+        addLog(`✅ Email enviado exitosamente para ${record.apellidos_y_nombres_paciente} (${record.numero_autorizacion})`);
+        return true;
+      } else {
+        addLog(`❌ Error enviando email para ${record.apellidos_y_nombres_paciente}: ${responseData.error || 'Error desconocido'}`);
+        return false;
+      }
+    } catch (error) {
+      addLog(`❌ Error de conexión enviando email para ${record.apellidos_y_nombres_paciente}: ${error}`);
+      return false;
+    }
+  };
+
   const processFile = async (file: File) => {
     setProcessingStep('analyzing');
     setLogs([]);
@@ -240,6 +273,9 @@ export default function CargaMasivaPage() {
                   numero_autorizacion: String(record.numero_autorizacion || 'Sin número'),
                   paciente: String(record.apellidos_y_nombres_paciente || 'Sin nombre')
                 });
+                
+                // Enviar email para el registro exitoso
+                await sendEmailForRecord(record);
               }
             } catch (singleError) {
               // errorCount++;
@@ -294,6 +330,12 @@ export default function CargaMasivaPage() {
           success: successRecords,
           failed: []
         });
+        
+        // Enviar emails para todos los registros exitosos
+        addLog('📧 Enviando emails de confirmación...');
+        for (const record of dataToUpload) {
+          await sendEmailForRecord(record);
+        }
       }
       
       // Actualizar estado a completado
