@@ -37,7 +37,7 @@ type CartState = {
     getPreConfiguredRoomsCount: () => number // Obtener cantidad de habitaciones pre-configuradas
     removeRoomAndUpdateGuestSelector: (uniqueId: string) => void // Eliminar habitación y actualizar GuestSelector
     updateRoomPrice: (uniqueId: string, guestConfig: GuestConfig) => void // Actualizar precio según huéspedes
-    calculatePriceForGuests: (basePrice: number, adults: number, children: number, babies: number) => number // Calcular precio
+    calculatePriceForGuests: (basePrice: number, adults: number, children: number, babies?: number) => number // Calcular precio
 }
 
 export const useCart = create<CartState>()(

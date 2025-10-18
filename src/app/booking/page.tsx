@@ -9,7 +9,7 @@ import { TablesInsert } from '@/types/supabase';
 export default function BookingPage() {
   const { rooms } = useCart();
   const { user, loading, isAuthenticated } = useAuthRedirect();
-  const [formData, setFormData] = useState<{[key: string]: any}>({});
+  const [formData, setFormData] = useState<{[key: string]: {[key: string]: string | number | boolean}}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [successMessage, setSuccessMessage] = useState('');
@@ -48,7 +48,7 @@ export default function BookingPage() {
     );
   }
 
-  const handleInputChange = (roomId: string, field: string, value: any) => {
+  const handleInputChange = (roomId: string, field: string, value: string | number | boolean) => {
     setFormData(prev => ({
       ...prev,
       [roomId]: {
@@ -180,7 +180,7 @@ export default function BookingPage() {
       });
       
       // Enviar a Supabase
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('informs')
         .insert(dataToInsert);
       
@@ -284,10 +284,10 @@ export default function BookingPage() {
 }
 
 interface RoomFormProps {
-  room: any;
+  room: { id: string; name: string; price: number };
   roomIndex: number;
-  formData: {[key: string]: any};
-  onInputChange: (field: string, value: any) => void;
+  formData: {[key: string]: {[key: string]: string | number | boolean}};
+  onInputChange: (field: string, value: string | number | boolean) => void;
   errors: {[key: string]: string};
 }
 

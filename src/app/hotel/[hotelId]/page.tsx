@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
-import HeroSection from '@/components/HeroSection/HeroSection';
+// import HeroSection from '@/components/HeroSection/HeroSection';
 import RoomDetails from '@/components/RoomDetails/RoomDetails';
 import BookingSummary from '@/components/BookingSummary/BookingSummary';
 import DatePicker from '@/components/DatePicker/DatePicker';
@@ -58,7 +58,7 @@ export default function HotelPage() {
   const guestButtonRef = useRef<HTMLDivElement>(null);
   
   // Protección de autenticación
-  const { user, loading, isAuthenticated } = useAuthRedirect();
+  const { loading } = useAuthRedirect();
   const { setGuestConfigs, setPreConfiguredRooms } = useCart();
 
   const hotel = hotelData[hotelId as keyof typeof hotelData];

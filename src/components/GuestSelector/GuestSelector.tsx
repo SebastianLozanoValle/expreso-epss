@@ -24,7 +24,7 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
   ]);
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const selectorRef = useRef<HTMLDivElement>(null);
-  const { addRoom: addRoomToCart, removeRoom: removeRoomFromCart, rooms: cartRooms, addRoomWithConfig, getLinkedRoomsCount, getPreConfiguredRoomsCount, updateRoomPrice, calculatePriceForGuests } = useCart();
+  const { rooms: cartRooms, getLinkedRoomsCount, updateRoomPrice } = useCart();
 
   // Calcular posición del popover
   useEffect(() => {
@@ -126,7 +126,7 @@ export default function GuestSelector({ isOpen, onClose, onGuestSelect, triggerR
     );
   };
 
-  const addRoom = () => {
+  // const addRoom = () => {
     const newId = Math.max(...rooms.map(r => r.id)) + 1;
     console.log('Agregando habitación:', { newId, currentRooms: rooms.length });
     setRooms(prev => {

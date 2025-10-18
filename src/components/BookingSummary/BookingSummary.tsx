@@ -9,8 +9,8 @@ interface BookingSummaryProps {
   nights: number;
 }
 
-export default function BookingSummary({ selectedRate, selectedRange, nights }: BookingSummaryProps) {
-  const { rooms, subTotal, removeRoom, clearCart, removeRoomAndUpdateGuestSelector } = useCart()
+export default function BookingSummary({ selectedRange, nights }: BookingSummaryProps) {
+  const { rooms, subTotal, clearCart, removeRoomAndUpdateGuestSelector } = useCart()
   const [total, setTotal] = useState(0)
   const [isHydrated, setIsHydrated] = useState(false)
   const [isTaxesExpanded, setIsTaxesExpanded] = useState(false)
@@ -31,7 +31,7 @@ export default function BookingSummary({ selectedRate, selectedRange, nights }: 
 
   // Calcular IVA (19% del total)
   const ivaAmount = Math.round(total * 0.19)
-  const subtotalAmount = total - ivaAmount
+  // const subtotalAmount = total - ivaAmount
 
   // Formatear fechas
   const formatDate = (date: Date) => {

@@ -11,7 +11,7 @@ export default function CargaMasivaPage() {
   const router = useRouter();
   
   // Protección de autenticación
-  const { user, loading, isAuthenticated } = useAuthRedirect();
+  const { user, loading } = useAuthRedirect();
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -142,7 +142,7 @@ export default function CargaMasivaPage() {
       // Usar datos transformados si existen, sino usar datos originales
       const dataToUpload = transformedData.length > 0 ? transformedData : fileData.map(row => {
         const rowData: any = {
-          user_id: user?.id,
+          user_id: user?.id || '',
         };
         
         // Mapeo por posición (basado en tu CSV)
@@ -184,7 +184,7 @@ export default function CargaMasivaPage() {
       addLog(`Subiendo ${dataToUpload.length} registros...`);
       
       // Intentar insertar todos los registros
-      const { data, error } = await supabase
+        const { error } = await supabase
         .from('informs')
         .insert(dataToUpload);
       
@@ -196,8 +196,8 @@ export default function CargaMasivaPage() {
         if (error.code === '23505' || error.message.includes('duplicate') || error.message.includes('constraint')) {
           addLog('🔄 Intentando insertar registros uno por uno para identificar errores específicos...');
           
-          let successCount = 0;
-          let errorCount = 0;
+        let successCount = 0;
+        let errorCount = 0;
           const successRecords: { numero_autorizacion: string; paciente: string }[] = [];
           const failedRecords: { numero_autorizacion: string; paciente: string; error: string }[] = [];
           
