@@ -44,7 +44,7 @@ export default function RoomDetails({ selectedRate, onRateSelect, selectedCity =
 
     return {
       id: `habitacion-${city.toLowerCase()}`,
-      name: `Habitación - Estándar`,
+      name: `Habitación - ${city}`,
       image: 'Habitación',
       images: [`/${city === 'Bogotá' ? 'bogota' : city === 'Medellín' ? 'medellin' : 'cali'}.webp`],
       features: [

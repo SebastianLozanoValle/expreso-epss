@@ -37,7 +37,7 @@ type CartState = {
     getPreConfiguredRoomsCount: () => number // Obtener cantidad de habitaciones pre-configuradas
     removeRoomAndUpdateGuestSelector: (uniqueId: string) => void // Eliminar habitación y actualizar GuestSelector
     updateRoomPrice: (uniqueId: string, guestConfig: GuestConfig) => void // Actualizar precio según huéspedes
-    calculatePriceForGuests: (basePrice: number, adults: number, children: number) => number // Calcular precio
+    calculatePriceForGuests: (basePrice: number, adults: number, children: number, city?: string) => number // Calcular precio
 }
 
 export const useCart = create<CartState>()(
@@ -111,11 +111,16 @@ export const useCart = create<CartState>()(
                 }
             }
             
-            // Calcular precio inicial basado en la configuración
+            // Extraer ciudad del nombre de la habitación
+            const cityMatch = room.name.match(/- (Bogotá|Medellín|Cali) -/);
+            const city = cityMatch ? cityMatch[1] : 'Bogotá';
+            
+            // Calcular precio inicial basado en la configuración y ciudad
             const initialPrice = get().calculatePriceForGuests(
                 room.basePrice || room.price,
                 config.adults,
-                config.children
+                config.children,
+                city
             )
             
             set((state) => ({

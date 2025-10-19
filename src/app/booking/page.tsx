@@ -81,7 +81,6 @@ export default function BookingPage() {
         'edad_paciente',
         'regimen',
         'descripcion_servicio',
-        'destino',
         'numero_autorizacion',
         'fecha_cita'
       ];
@@ -142,6 +141,20 @@ export default function BookingPage() {
       rooms.forEach(room => {
         const roomData = formData[room.id] || {};
         
+        // Extraer ciudad del nombre de la habitación (ej: "Habitación - Medellín - Usuario + Acompañante")
+        const cityMatch = room.name.match(/- (Bogotá|Medellín|Cali) -/);
+        const city = cityMatch ? cityMatch[1] : 'Bogotá';
+        
+        // Asignar hotel según la ciudad
+        let hotelAsignado = '';
+        if (city === 'Bogotá') {
+          hotelAsignado = 'Ilar 74';
+        } else if (city === 'Medellín') {
+          hotelAsignado = 'Saana 13';
+        } else if (city === 'Cali') {
+          hotelAsignado = 'Bulevar';
+        }
+        
         // Crear objeto con solo los campos que tienen valor
         const insertData: TablesInsert<'informs'> = {
           // Campo obligatorio: user_id del usuario logueado
@@ -154,7 +167,7 @@ export default function BookingPage() {
           edad_paciente: typeof roomData.edad_paciente === 'number' ? roomData.edad_paciente : parseInt(String(roomData.edad_paciente)) || null,
           regimen: String(roomData.regimen || ''),
           descripcion_servicio: String(roomData.descripcion_servicio || ''),
-          destino: String(roomData.destino || ''),
+          destino: city, // Asignar ciudad automáticamente
           numero_autorizacion: String(roomData.numero_autorizacion || ''),
           fecha_cita: String(roomData.fecha_cita || ''),
           
@@ -163,9 +176,9 @@ export default function BookingPage() {
           numero_contacto: typeof roomData.numero_contacto === 'number' ? roomData.numero_contacto : (roomData.numero_contacto ? parseInt(String(roomData.numero_contacto)) : null),
           correo: String(roomData.correo || '') || null,
           hora_cita: String(roomData.hora_cita || '') || null,
-          fecha_check_in: String(roomData.fecha_check_in || '') || null,
-          fecha_check_out: String(roomData.fecha_check_out || '') || null,
-          hotel_asignado: String(roomData.hotel_asignado || '') || null,
+          fecha_check_in: null, // Se asignará automáticamente desde la página anterior
+          fecha_check_out: null, // Se asignará automáticamente desde la página anterior
+          hotel_asignado: hotelAsignado, // Asignar hotel automáticamente según ciudad
           observaciones: String(roomData.observaciones || '') || null,
           requiere_acompañante: Boolean(roomData.requiere_acompañante),
           
@@ -292,16 +305,18 @@ interface RoomFormProps {
 }
 
 function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomFormProps) {
+  // Función para obtener clases de input con mejor contraste
+  const getInputClassName = (fieldName: string) => {
+    const baseClasses = "w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900";
+    const errorClasses = errors[`${room.id}_${fieldName}`] 
+      ? 'border-red-500 bg-red-50' 
+      : 'border-gray-400 hover:border-gray-500';
+    return `${baseClasses} ${errorClasses}`;
+  };
   const [isAccompanimentExpanded, setIsAccompanimentExpanded] = useState(false);
   
   const getFieldError = (field: string) => errors[`${room.id}_${field}`];
   
-  const getInputClassName = (field: string) => {
-    const hasError = getFieldError(field);
-    return `w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-      hasError ? 'border-red-500 bg-red-50' : 'border-gray-300'
-    }`;
-  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -342,18 +357,18 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                 <select
                   value={String(formData.tipo_documento_paciente || '')}
                   onChange={(e) => onInputChange('tipo_documento_paciente', e.target.value)}
-                  className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white ${
+                  className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none bg-white text-gray-900 ${
                     errors[`${room.id}_tipo_documento_paciente`] 
                       ? 'border-red-500 bg-red-50' 
-                      : 'border-gray-300'
+                      : 'border-gray-400 hover:border-gray-500'
                   }`}
                   required
                 >
-                  <option value="" disabled>Seleccionar...</option>
-                  <option value="CC">Cédula de Ciudadanía</option>
-                  <option value="TI">Tarjeta de Identidad</option>
-                  <option value="CE">Cédula de Extranjería</option>
-                  <option value="PA">Pasaporte</option>
+                  <option value="" disabled className="text-gray-500">Seleccionar...</option>
+                  <option value="CC" className="text-gray-900">Cédula de Ciudadanía</option>
+                  <option value="TI" className="text-gray-900">Tarjeta de Identidad</option>
+                  <option value="CE" className="text-gray-900">Cédula de Extranjería</option>
+                  <option value="PA" className="text-gray-900">Pasaporte</option>
                 </select>
                 {/* Icono de dropdown personalizado */}
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -424,7 +439,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
               <select
                 value={String(formData.regimen || '')}
                 onChange={(e) => onInputChange('regimen', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 hover:border-gray-500"
                 required
               >
                 <option value="">Seleccionar...</option>
@@ -442,23 +457,11 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                 type="text"
                 value={String(formData.descripcion_servicio || '')}
                 onChange={(e) => onInputChange('descripcion_servicio', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 hover:border-gray-500"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Destino *
-              </label>
-              <input
-                type="text"
-                value={String(formData.destino || '')}
-                onChange={(e) => onInputChange('destino', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -484,7 +487,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                 type="number"
                 value={String(formData.cantidad_servicios_autorizados || '')}
                 onChange={(e) => onInputChange('cantidad_servicios_autorizados', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 hover:border-gray-500"
               />
             </div>
 
@@ -496,7 +499,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                 type="tel"
                 value={String(formData.numero_contacto || '')}
                 onChange={(e) => onInputChange('numero_contacto', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 hover:border-gray-500"
               />
             </div>
 
@@ -539,45 +542,10 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                 type="time"
                 value={String(formData.hora_cita || '')}
                 onChange={(e) => onInputChange('hora_cita', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 hover:border-gray-500"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de Check In
-              </label>
-              <input
-                type="date"
-                value={String(formData.fecha_check_in || '')}
-                onChange={(e) => onInputChange('fecha_check_in', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de Check Out
-              </label>
-              <input
-                type="date"
-                value={String(formData.fecha_check_out || '')}
-                onChange={(e) => onInputChange('fecha_check_out', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Hotel Asignado
-              </label>
-              <input
-                type="text"
-                value={String(formData.hotel_asignado || '')}
-                onChange={(e) => onInputChange('hotel_asignado', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -587,7 +555,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                 value={String(formData.observaciones || '')}
                 onChange={(e) => onInputChange('observaciones', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 hover:border-gray-500"
               />
             </div>
           </div>
@@ -700,7 +668,7 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
                   <select
                     value={String(formData.parentesco_acompañante || '')}
                     onChange={(e) => onInputChange('parentesco_acompañante', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 hover:border-gray-500"
                   >
                     <option value="">Seleccionar...</option>
                     <option value="Cónyuge">Cónyuge</option>
