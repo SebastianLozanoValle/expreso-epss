@@ -105,6 +105,10 @@ export function transformCsvDataToInforms(
       switch (fieldName) {
         case 'edad_paciente':
         case 'cantidad_servicios_autorizados':
+          // Siempre asignar 1 habitación autorizada
+          transformedRow[fieldName] = 1
+          break
+          
         case 'numero_contacto':
         case 'numero_documento_paciente':
           if (value && value !== '') {
@@ -149,6 +153,25 @@ export function transformCsvDataToInforms(
           break
       }
     })
+    
+    // Asignar hotel automáticamente según la ciudad
+    const destino = transformedRow.destino?.toLowerCase() || '';
+    let hotelAsignado = '';
+    if (destino.includes('bogotá') || destino.includes('bogota')) {
+      hotelAsignado = 'Ilar 74';
+    } else if (destino.includes('medellín') || destino.includes('medellin')) {
+      hotelAsignado = 'Saana 45';
+    } else if (destino.includes('cali')) {
+      hotelAsignado = 'Bulevar del Rio';
+    }
+    
+    // Si se asignó un hotel automáticamente, usarlo; sino mantener el valor original
+    if (hotelAsignado) {
+      transformedRow.hotel_asignado = hotelAsignado;
+    }
+    
+    // Siempre asignar habitación estándar
+    transformedRow.descripcion_servicio = 'Habitación Estándar';
     
     // Validar que tenga al menos el número de autorización (campo requerido)
     // Verificar si tiene número de autorización

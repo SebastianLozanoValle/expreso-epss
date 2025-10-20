@@ -2,9 +2,9 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { saveAs } from 'file-saver';
 import { supabase } from '@/lib/supabase';
+// Removed server-side dependencies
 
 // Datos basados en el JSON proporcionado
 const sampleData = {
@@ -41,6 +41,7 @@ function GenerarPDFContent() {
   const [message, setMessage] = useState('');
   const [patientData, setPatientData] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
   const searchParams = useSearchParams();
   const numeroAutorizacion = searchParams.get('auth');
 
@@ -53,22 +54,28 @@ function GenerarPDFContent() {
       }
 
       try {
+        console.log('Buscando datos para autorización:', numeroAutorizacion);
+        
         const { data, error } = await supabase
           .from('informs')
           .select('*')
           .eq('numero_autorizacion', numeroAutorizacion)
-          .single();
+          .maybeSingle();
+
+        console.log('Resultado de la consulta:', { data, error });
 
         if (error) {
           console.error('Error loading patient data:', error);
-          setMessage('Error al cargar los datos del paciente');
+          setMessage(`Error al cargar los datos del paciente: ${error.message}`);
         } else if (data) {
+          console.log('Datos del paciente cargados:', data);
           setPatientData(data);
+          setMessage(''); // Limpiar mensaje de error si hay datos
         } else {
           setMessage('No se encontraron datos para este número de autorización');
         }
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error en la consulta:', err);
         setMessage('Error al cargar los datos');
       } finally {
         setLoadingData(false);
@@ -96,92 +103,50 @@ function GenerarPDFContent() {
       // Usar datos del paciente o datos de ejemplo si no hay datos
       const dataToUse = patientData || sampleData;
       
-      // Cargar el PDF base
-      const pdfUrl = '/CONFIRMACION-RESERVA.pdf';
-      const existingPdfBytes = await fetch(pdfUrl).then(res => res.arrayBuffer());
-      
-      // Crear un nuevo PDFDocument
-      const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      const pages = pdfDoc.getPages();
-      const firstPage = pages[0];
-      
-      // Obtener la fuente
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      
-      const { width, height } = firstPage.getSize();
-      
-      // Función para agregar texto al PDF
-      const addText = (text: string, x: number, y: number, fontSize: number = 10, isBold: boolean = false) => {
-        firstPage.drawText(text, {
-          x,
-          y,
-          size: fontSize,
-          font: isBold ? boldFont : font,
-          color: rgb(0, 0, 0), // Negro
-        });
+      // Preparar los datos para enviar a la API
+      const requestData = {
+        hotel: dataToUse.hotel_asignado || '',
+        numero_autorizacion: dataToUse.numero_autorizacion || '',
+        nombre_paciente: dataToUse.apellidos_y_nombres_paciente || '',
+        documento_paciente: dataToUse.numero_documento_paciente || '',
+        fecha_llegada: dataToUse.fecha_check_in || '', // Enviar fecha original para cálculo
+        fecha_salida: dataToUse.fecha_check_out || '', // Enviar fecha original para cálculo
+        tipo_habitacion: dataToUse.descripcion_servicio || 'Habitación Estándar',
+        cantidad_habitaciones: dataToUse.cantidad_servicios_autorizados?.toString() || '1',
+        telefono: dataToUse.numero_contacto?.toString() || '',
+        observaciones: dataToUse.observaciones || '',
+        acompañante: dataToUse.apellidos_y_nombres_acompañante || '' // Incluir acompañante
       };
 
-      // Mapear los datos del JSON a las posiciones específicas del PDF
-      // Posiciones ajustadas para alinearse correctamente con las etiquetas
-      
-      // 1. Hotel asignado - frente a "HOTEL" en la sección de información del hotel
-      addText(dataToUse.hotel_asignado || '', 140, height - 180, 10);
-      
-      // 2. Número de autorización - al lado de "Confirmamos Reserva de la siguiente manera"
-      addText(dataToUse.numero_autorizacion || '', 310, height - 310, 10);
-      
-      // 3. Nombre del paciente - frente a "Huésped(es)"
-      addText(dataToUse.apellidos_y_nombres_paciente || '', 170, height - 330, 10);
-      
-      // 4. Documento paciente - debajo del nombre con espacio
-      addText(dataToUse.numero_documento_paciente || '', 170, height - 340, 10);
-      
-      // 5. Fecha check-in - frente a "Fecha de Llegada" (subido un poquito)
-      addText(formatDate(dataToUse.fecha_check_in || ''), 180, height - 355, 10);
-      
-      // 6. Fecha check-out - frente a "Fecha de Salida" (subido un poquito)
-      addText(formatDate(dataToUse.fecha_check_out || ''), 180, height - 370, 10);
-      
-      // 7. Número de contacto - justo debajo del número de autorización
-      addText("Teléfono:", 400, height - 335, 10);
-      addText(dataToUse.numero_contacto || '', 470, height - 335, 10);
-      
-      // 8. Observaciones - frente a "Observaciones"
-      const observaciones = dataToUse.observaciones || '';
-      const observacionesLines = observaciones.split(' ');
-      let currentY = height - 480;
-      let currentLine = '';
-      
-      for (const word of observacionesLines) {
-        if (currentLine.length + word.length > 60) {
-          addText(currentLine, 170, currentY, 9);
-          currentY -= 15;
-          currentLine = word + ' ';
-        } else {
-          currentLine += word + ' ';
-        }
-      }
-      if (currentLine) {
-        addText(currentLine, 170, currentY, 9);
+      // Llamar a la API para generar el PDF
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al generar el PDF');
       }
 
-      // Guardar el PDF modificado
-      const pdfBytes = await pdfDoc.save();
+      // Obtener el PDF como blob
+      const pdfBlob = await response.blob();
       
-      // Descargar el archivo
-      const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
-      saveAs(blob, `confirmacion-reserva-${dataToUse.numero_autorizacion || 'demo'}.pdf`);
+      // Descargar el PDF
+      saveAs(pdfBlob, `confirmacion-reserva-${dataToUse.numero_autorizacion || 'demo'}.pdf`);
       
-      setMessage('PDF generado y descargado exitosamente!');
+      setMessage('PDF generado y descargado exitosamente desde Word!');
       
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      setMessage('Error al generar el PDF. Asegúrate de que el archivo CONFIRMACION-RESERVA.pdf esté en la carpeta public/');
+      console.error('Error generating PDF from Word:', error);
+      setMessage('Error al generar el PDF desde Word. Verifica que el archivo CONFIRMACION-RESERVA-WORD.docx esté en la carpeta public/');
     } finally {
       setIsLoading(false);
     }
   };
+
 
   if (loadingData) {
     return (

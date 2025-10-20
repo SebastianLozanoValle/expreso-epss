@@ -35,7 +35,7 @@ export const ReservaEmail = ({ patientName = 'Estimado paciente', numeroAutoriza
         <Section style={buttonContainer}>
           <Button
             style={button}
-            href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://expreso-epss.vercel.app'}/generar?auth=${numeroAutorizacion || 'demo'}`}
+            href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://evtxhebrara.vercel.app/'}/generar?auth=${numeroAutorizacion || 'demo'}`}
           >
             Ir por el comprobante
           </Button>

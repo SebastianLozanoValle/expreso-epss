@@ -150,9 +150,9 @@ export default function BookingPage() {
         if (city === 'Bogotá') {
           hotelAsignado = 'Ilar 74';
         } else if (city === 'Medellín') {
-          hotelAsignado = 'Saana 13';
+          hotelAsignado = 'Saana 45';
         } else if (city === 'Cali') {
-          hotelAsignado = 'Bulevar';
+          hotelAsignado = 'Bulevar del Rio';
         }
         
         // Crear objeto con solo los campos que tienen valor
@@ -166,13 +166,13 @@ export default function BookingPage() {
           apellidos_y_nombres_paciente: String(roomData.apellidos_y_nombres_paciente || ''),
           edad_paciente: typeof roomData.edad_paciente === 'number' ? roomData.edad_paciente : parseInt(String(roomData.edad_paciente)) || null,
           regimen: String(roomData.regimen || ''),
-          descripcion_servicio: String(roomData.descripcion_servicio || ''),
+          descripcion_servicio: 'Habitación Estándar', // Siempre habitación estándar
           destino: city, // Asignar ciudad automáticamente
           numero_autorizacion: String(roomData.numero_autorizacion || ''),
           fecha_cita: String(roomData.fecha_cita || ''),
           
           // Campos opcionales
-          cantidad_servicios_autorizados: typeof roomData.cantidad_servicios_autorizados === 'number' ? roomData.cantidad_servicios_autorizados : (roomData.cantidad_servicios_autorizados ? parseInt(String(roomData.cantidad_servicios_autorizados)) : null),
+          cantidad_servicios_autorizados: 1, // Siempre 1 habitación autorizada
           numero_contacto: typeof roomData.numero_contacto === 'number' ? roomData.numero_contacto : (roomData.numero_contacto ? parseInt(String(roomData.numero_contacto)) : null),
           correo: String(roomData.correo || '') || null,
           hora_cita: String(roomData.hora_cita || '') || null,

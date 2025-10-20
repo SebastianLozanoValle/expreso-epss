@@ -188,10 +188,22 @@ export default function CargaMasivaPage() {
           rowData.apellidos_y_nombres_paciente = row[2] || null; // RODRIGUEZ RODRIGUEZ LINA
           rowData.edad_paciente = row[3] ? parseInt(row[3]) : null; // 30
           rowData.regimen = row[4] || null; // S
-          rowData.descripcion_servicio = row[5] || null; // HOTEL HABITACION SENCILLA YOPAL
+          rowData.descripcion_servicio = 'Habitación Estándar'; // Siempre habitación estándar
           rowData.destino = row[6] || null; // YOPAL
+          
+          // Asignar hotel automáticamente según la ciudad
+          const destino = rowData.destino?.toLowerCase() || '';
+          let hotelAsignado = '';
+          if (destino.includes('bogotá') || destino.includes('bogota')) {
+            hotelAsignado = 'Ilar 74';
+          } else if (destino.includes('medellín') || destino.includes('medellin')) {
+            hotelAsignado = 'Saana 45';
+          } else if (destino.includes('cali')) {
+            hotelAsignado = 'Bulevar del Rio';
+          }
+          
           rowData.numero_autorizacion = row[7] || null; // 298756457
-          rowData.cantidad_servicios_autorizados = row[8] ? parseInt(row[8]) : null; // 8
+          rowData.cantidad_servicios_autorizados = 1; // Siempre 1 habitación autorizada
           rowData.numero_contacto = row[9] ? parseInt(row[9]) : null; // 3105555555
           rowData.requiere_acompañante = row[10] === 'SI' || row[10] === 'S'; // NO
           rowData.tipo_documento_acompañante = row[11] !== 'N/A' ? row[11] : null; // N/A
@@ -207,7 +219,7 @@ export default function CargaMasivaPage() {
           rowData.fecha_check_in = row[21] || null; // 9/30/2025
           rowData.fecha_check_out = row[22] || null; // 31/09/2025
           rowData.correo = row[23] || null; // rodriguez@hotmail.com
-          rowData.hotel_asignado = row[24] !== '-' ? row[24] : null; // -
+          rowData.hotel_asignado = hotelAsignado || (row[24] !== '-' ? row[24] : null); // Usar asignación automática o valor del CSV
           rowData.observaciones = row[25] || null; // SOLO SERVICIO DE ALOJAMIENTO...
         }
         

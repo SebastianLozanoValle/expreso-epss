@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await resend.emails.send({
       from: 'reservas@hebrara.com', // Cambia por tu dominio verificado en Resend
-      to: ['sebevcol@gmail.com'], // Email de pruebas configurado en Resend
+      to: [to], // Usar el email del usuario logueado
       subject: `Confirmación de Reserva Hotelera - ${numeroAutorizacion}`,
       react: ReservaEmail({ 
         patientName: patientName || 'Estimado paciente',
