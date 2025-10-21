@@ -17,10 +17,77 @@ interface ReservaModalProps {
   reserva: Reserva | null;
   isOpen: boolean;
   onClose: () => void;
+  onSave?: (updatedReserva: Reserva) => void;
 }
 
-function ReservaModal({ reserva, isOpen, onClose }: ReservaModalProps) {
+function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedReserva, setEditedReserva] = useState<Reserva | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Inicializar datos editables cuando se abre el modal
+  useEffect(() => {
+    if (reserva) {
+      console.log('Modal: Inicializando reserva:', reserva);
+      setEditedReserva({ ...reserva });
+    }
+  }, [reserva]);
+
   if (!isOpen || !reserva) return null;
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedReserva({ ...reserva });
+  };
+
+  const handleSave = async () => {
+    if (!editedReserva || !onSave) return;
+    
+    setIsSaving(true);
+    try {
+      await onSave(editedReserva);
+      setIsEditing(false);
+      toast.success('Reserva actualizada exitosamente', {
+        duration: 4000,
+        style: {
+          background: '#10B981',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          fontSize: '14px',
+          fontWeight: '500',
+        },
+        icon: '✅',
+      });
+    } catch (error) {
+      toast.error('Error al actualizar la reserva', {
+        duration: 4000,
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          fontSize: '14px',
+          fontWeight: '500',
+        },
+        icon: '❌',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleFieldChange = (field: keyof Reserva, value: string) => {
+    if (!editedReserva) return;
+    setEditedReserva({
+      ...editedReserva,
+      [field]: value
+    });
+  };
 
   // Calcular precio basado en el hotel y cantidad de inquilinos
   const calcularPrecio = () => {
@@ -76,14 +143,45 @@ function ReservaModal({ reserva, isOpen, onClose }: ReservaModalProps) {
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Detalles de la Reserva</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center space-x-3">
+              {reserva.activa !== false && (
+                <>
+                  {!isEditing ? (
+                    <button
+                      onClick={handleEdit}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      ✏️ Editar
+                    </button>
+                  ) : (
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleCancel}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        disabled={isSaving}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        disabled={isSaving}
+                      >
+                        {isSaving ? 'Guardando...' : '💾 Guardar'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -93,34 +191,111 @@ function ReservaModal({ reserva, isOpen, onClose }: ReservaModalProps) {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nombre Completo</label>
-                <p className="mt-1 text-sm text-gray-900">{reserva.apellidos_y_nombres_paciente || 'N/A'}</p>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedReserva?.apellidos_y_nombres_paciente || ''}
+                    onChange={(e) => handleFieldChange('apellidos_y_nombres_paciente', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">{reserva.apellidos_y_nombres_paciente || 'N/A'}</p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Documento</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {reserva.tipo_documento_paciente} {reserva.numero_documento_paciente}
-                </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Tipo Documento</label>
+                  {isEditing ? (
+                    <select
+                      value={editedReserva?.tipo_documento_paciente || ''}
+                      onChange={(e) => handleFieldChange('tipo_documento_paciente', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                    >
+                      <option value="CC">CC</option>
+                      <option value="TI">TI</option>
+                      <option value="CE">CE</option>
+                      <option value="RC">RC</option>
+                    </select>
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">{reserva.tipo_documento_paciente || 'N/A'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Número Documento</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedReserva?.numero_documento_paciente || ''}
+                      onChange={(e) => handleFieldChange('numero_documento_paciente', e.target.value)}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-900">{reserva.numero_documento_paciente || 'N/A'}</p>
+                  )}
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Edad</label>
-                <p className="mt-1 text-sm text-gray-900">{reserva.edad_paciente || 'N/A'}</p>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={editedReserva?.edad_paciente || ''}
+                    onChange={(e) => handleFieldChange('edad_paciente', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                    min="0"
+                    max="120"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">{reserva.edad_paciente || 'N/A'}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Régimen</label>
-                <p className="mt-1 text-sm text-gray-900">{reserva.regimen || 'N/A'}</p>
+                {isEditing ? (
+                  <select
+                    value={editedReserva?.regimen || ''}
+                    onChange={(e) => handleFieldChange('regimen', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  >
+                    <option value="Contributivo">Contributivo</option>
+                    <option value="Subsidiado">Subsidiado</option>
+                    <option value="Especial">Especial</option>
+                    <option value="Excepción">Excepción</option>
+                  </select>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">{reserva.regimen || 'N/A'}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Teléfono</label>
-                <p className="mt-1 text-sm text-gray-900">{reserva.numero_contacto || 'N/A'}</p>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    value={editedReserva?.numero_contacto || ''}
+                    onChange={(e) => handleFieldChange('numero_contacto', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">{reserva.numero_contacto || 'N/A'}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Email</label>
-                <p className="mt-1 text-sm text-gray-900">{reserva.correo || 'N/A'}</p>
+                {isEditing ? (
+                  <input
+                    type="email"
+                    value={editedReserva?.correo || ''}
+                    onChange={(e) => handleFieldChange('correo', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">{reserva.correo || 'N/A'}</p>
+                )}
               </div>
             </div>
 
@@ -130,17 +305,53 @@ function ReservaModal({ reserva, isOpen, onClose }: ReservaModalProps) {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700">Número de Autorización</label>
-                <p className="mt-1 text-sm text-gray-900 font-mono">{reserva.numero_autorizacion || 'N/A'}</p>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedReserva?.numero_autorizacion || ''}
+                    onChange={(e) => handleFieldChange('numero_autorizacion', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-gray-900 bg-white"
+                    placeholder="Número de autorización"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900 font-mono">{reserva.numero_autorizacion || 'N/A'}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Hotel Asignado</label>
-                <p className="mt-1 text-sm text-gray-900">{reserva.hotel_asignado || 'N/A'}</p>
+                {isEditing ? (
+                  <select
+                    value={editedReserva?.hotel_asignado || ''}
+                    onChange={(e) => handleFieldChange('hotel_asignado', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  >
+                    <option value="">Seleccionar hotel</option>
+                    <option value="Ilar 74">Ilar 74</option>
+                    <option value="Saana 45">Saana 45</option>
+                    <option value="Bulevar del Rio">Bulevar del Rio</option>
+                  </select>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">{reserva.hotel_asignado || 'N/A'}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Destino</label>
-                <p className="mt-1 text-sm text-gray-900">{reserva.destino || 'N/A'}</p>
+                {isEditing ? (
+                  <select
+                    value={editedReserva?.destino || ''}
+                    onChange={(e) => handleFieldChange('destino', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  >
+                    <option value="">Seleccionar destino</option>
+                    <option value="BOGOTA">Bogotá</option>
+                    <option value="MEDELLIN">Medellín</option>
+                    <option value="CALI">Cali</option>
+                  </select>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">{reserva.destino || 'N/A'}</p>
+                )}
               </div>
 
               <div>
@@ -150,28 +361,64 @@ function ReservaModal({ reserva, isOpen, onClose }: ReservaModalProps) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Check-in</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {reserva.fecha_check_in ? new Date(reserva.fecha_check_in).toLocaleDateString('es-ES') : 'N/A'}
-                </p>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={editedReserva?.fecha_check_in || ''}
+                    onChange={(e) => handleFieldChange('fecha_check_in', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">
+                    {reserva.fecha_check_in ? new Date(reserva.fecha_check_in).toLocaleDateString('es-ES') : 'N/A'}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Check-out</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {reserva.fecha_check_out ? new Date(reserva.fecha_check_out).toLocaleDateString('es-ES') : 'N/A'}
-                </p>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={editedReserva?.fecha_check_out || ''}
+                    onChange={(e) => handleFieldChange('fecha_check_out', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">
+                    {reserva.fecha_check_out ? new Date(reserva.fecha_check_out).toLocaleDateString('es-ES') : 'N/A'}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Fecha de Cita</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {reserva.fecha_cita ? new Date(reserva.fecha_cita).toLocaleDateString('es-ES') : 'N/A'}
-                </p>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={editedReserva?.fecha_cita || ''}
+                    onChange={(e) => handleFieldChange('fecha_cita', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">
+                    {reserva.fecha_cita ? new Date(reserva.fecha_cita).toLocaleDateString('es-ES') : 'N/A'}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Hora de Cita</label>
-                <p className="mt-1 text-sm text-gray-900">{reserva.hora_cita || 'N/A'}</p>
+                {isEditing ? (
+                  <input
+                    type="time"
+                    value={editedReserva?.hora_cita || ''}
+                    onChange={(e) => handleFieldChange('hora_cita', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-gray-900">{reserva.hora_cita || 'N/A'}</p>
+                )}
               </div>
             </div>
           </div>
@@ -232,11 +479,19 @@ function ReservaModal({ reserva, isOpen, onClose }: ReservaModalProps) {
             {reserva.activa === false && (
               <div className="mt-2 text-sm text-gray-600">
                 <p>Cancelada por: {reserva.borrado_por || 'Sistema'}</p>
-                <p>Fecha de cancelación: {
-                  reserva.fecha_cancelacion 
-                    ? new Date(reserva.fecha_cancelacion).toLocaleDateString('es-ES') 
-                    : 'N/A'
-                }</p>
+                <div>Fecha de cancelación: {
+                  reserva.fecha_cancelacion ? (
+                    <div>
+                      <div>{new Date(reserva.fecha_cancelacion).toLocaleDateString('es-ES')}</div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(reserva.fecha_cancelacion).toLocaleTimeString('es-ES', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </div>
+                    </div>
+                  ) : 'N/A'
+                }</div>
               </div>
             )}
           </div>
@@ -257,6 +512,8 @@ function ReservasContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'cancelled'>('all');
+  const [sortBy, setSortBy] = useState<'fecha_creacion' | 'apellidos_y_nombres_paciente' | 'numero_autorizacion' | 'hotel_asignado' | 'destino'>('fecha_creacion');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 10;
 
   // Debounce para el término de búsqueda
@@ -279,7 +536,7 @@ function ReservasContent() {
       let query = supabase
         .from('informs')
         .select('*', { count: 'exact' })
-        .order('fecha_creacion', { ascending: false })
+        .order(sortBy, { ascending: sortOrder === 'asc' })
         .range(from, to);
 
       // Aplicar filtros
@@ -392,11 +649,51 @@ function ReservasContent() {
     setIsModalOpen(true);
   };
 
+  // Guardar cambios en la reserva
+  const handleSaveReserva = async (updatedReserva: Reserva) => {
+    try {
+      const { error } = await supabase
+        .from('informs')
+        .update({
+          apellidos_y_nombres_paciente: updatedReserva.apellidos_y_nombres_paciente,
+          tipo_documento_paciente: updatedReserva.tipo_documento_paciente,
+          numero_documento_paciente: updatedReserva.numero_documento_paciente,
+          edad_paciente: updatedReserva.edad_paciente,
+          regimen: updatedReserva.regimen,
+          numero_contacto: updatedReserva.numero_contacto,
+          correo: updatedReserva.correo,
+          numero_autorizacion: updatedReserva.numero_autorizacion,
+          hotel_asignado: updatedReserva.hotel_asignado,
+          destino: updatedReserva.destino,
+          fecha_check_in: updatedReserva.fecha_check_in,
+          fecha_check_out: updatedReserva.fecha_check_out,
+          fecha_cita: updatedReserva.fecha_cita,
+          hora_cita: updatedReserva.hora_cita,
+          apellidos_y_nombres_acompañante: updatedReserva.apellidos_y_nombres_acompañante,
+          tipo_documento_acompañante: updatedReserva.tipo_documento_acompañante,
+          numero_documento_acompañante: updatedReserva.numero_documento_acompañante,
+          parentesco_acompañante: updatedReserva.parentesco_acompañante,
+          observaciones: updatedReserva.observaciones
+        })
+        .eq('numero_autorizacion', updatedReserva.numero_autorizacion);
+
+      if (error) {
+        throw error;
+      }
+
+      // Recargar la lista
+      loadReservas(currentPage);
+    } catch (error) {
+      console.error('Error updating reserva:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       loadReservas(currentPage);
     }
-  }, [isAuthenticated, currentPage, debouncedSearchTerm, filterStatus]);
+  }, [isAuthenticated, currentPage, debouncedSearchTerm, filterStatus, sortBy, sortOrder]);
 
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
@@ -431,7 +728,7 @@ function ReservasContent() {
 
         {/* Filtros y búsqueda */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Buscar
@@ -446,7 +743,7 @@ function ReservasContent() {
                 placeholder="Nombre, autorización o acompañante..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                className="w-full h-12 px-3 border-2 border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-gray-900 placeholder-gray-600 shadow-sm"
               />
             </div>
             
@@ -455,7 +752,7 @@ function ReservasContent() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'cancelled')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                className="w-full h-12 px-3 border-2 border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-gray-900 shadow-sm"
               >
                 <option value="all">Todas</option>
                 <option value="active">Activas</option>
@@ -463,10 +760,37 @@ function ReservasContent() {
               </select>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ordenar por</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'fecha_creacion' | 'apellidos_y_nombres_paciente' | 'numero_autorizacion' | 'hotel_asignado' | 'destino')}
+                className="w-full h-12 px-3 border-2 border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-gray-900 shadow-sm"
+              >
+                <option value="fecha_creacion">Fecha de Creación</option>
+                <option value="apellidos_y_nombres_paciente">Nombre del Paciente</option>
+                <option value="numero_autorizacion">Número de Autorización</option>
+                <option value="hotel_asignado">Hotel Asignado</option>
+                <option value="destino">Destino</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Orden</label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="w-full h-12 px-3 border-2 border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-gray-900 shadow-sm"
+              >
+                <option value="desc">Descendente</option>
+                <option value="asc">Ascendente</option>
+              </select>
+            </div>
+
             <div className="flex items-end">
               <button
                 onClick={() => loadReservas(currentPage)}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+                className="w-full h-12 bg-teal-600 hover:bg-teal-700 text-white px-4 rounded-md font-medium transition-colors shadow-md hover:shadow-lg"
               >
                 Buscar
               </button>
@@ -492,13 +816,34 @@ function ReservasContent() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Paciente
+                        <div className="flex items-center space-x-1">
+                          <span>Paciente</span>
+                          {sortBy === 'apellidos_y_nombres_paciente' && (
+                            <span className="text-teal-600">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Autorización
+                        <div className="flex items-center space-x-1">
+                          <span>Autorización</span>
+                          {sortBy === 'numero_autorizacion' && (
+                            <span className="text-teal-600">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Hotel
+                        <div className="flex items-center space-x-1">
+                          <span>Hotel</span>
+                          {sortBy === 'hotel_asignado' && (
+                            <span className="text-teal-600">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Fechas
@@ -507,7 +852,14 @@ function ReservasContent() {
                         Estado
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Creado
+                        <div className="flex items-center space-x-1">
+                          <span>Creado</span>
+                          {sortBy === 'fecha_creacion' && (
+                            <span className="text-teal-600">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Acciones
@@ -559,7 +911,17 @@ function ReservasContent() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {reserva.fecha_creacion ? new Date(reserva.fecha_creacion).toLocaleDateString('es-ES') : 'N/A'}
+                          {reserva.fecha_creacion ? (
+                            <div>
+                              <div>{new Date(reserva.fecha_creacion).toLocaleDateString('es-ES')}</div>
+                              <div className="text-xs text-gray-400">
+                                {new Date(reserva.fecha_creacion).toLocaleTimeString('es-ES', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                            </div>
+                          ) : 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
@@ -673,6 +1035,7 @@ function ReservasContent() {
           setIsModalOpen(false);
           setSelectedReserva(null);
         }}
+        onSave={handleSaveReserva}
       />
 
       {/* Toast notifications */}
