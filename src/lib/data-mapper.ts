@@ -243,7 +243,7 @@ export function validateTransformedData(data: TablesInsert<'informs'>[]): {
       errors.push('Formato de correo inválido')
     }
     
-    if (row.edad_paciente && (row.edad_paciente < 0 || row.edad_paciente > 120)) {
+    if (row.edad_paciente && (parseInt(row.edad_paciente) < 0 || parseInt(row.edad_paciente) > 120)) {
       errors.push('Edad del paciente debe estar entre 0 y 120 años')
     }
     

@@ -237,7 +237,7 @@ function BookingPageContent() {
           tipo_documento_paciente: String(roomData.tipo_documento_paciente || ''),
           numero_documento_paciente: String(roomData.numero_documento_paciente || ''),
           apellidos_y_nombres_paciente: String(roomData.apellidos_y_nombres_paciente || ''),
-          edad_paciente: typeof roomData.edad_paciente === 'number' ? roomData.edad_paciente : parseInt(String(roomData.edad_paciente)) || null,
+          edad_paciente: String(roomData.edad_paciente || ''),
           regimen: String(roomData.regimen || ''),
           descripcion_servicio: 'Habitación Estándar', // Siempre habitación estándar
           destino: cityFromParams, // Usar ciudad de los parámetros de la URL
@@ -245,8 +245,8 @@ function BookingPageContent() {
           fecha_cita: String(roomData.fecha_cita || ''),
           
           // Campos opcionales
-          cantidad_servicios_autorizados: 1, // Siempre 1 habitación autorizada
-          numero_contacto: typeof roomData.numero_contacto === 'number' ? roomData.numero_contacto : (roomData.numero_contacto ? parseInt(String(roomData.numero_contacto)) : null),
+          cantidad_servicios_autorizados: '1', // Siempre 1 habitación autorizada
+          numero_contacto: String(roomData.numero_contacto || '') || null,
           correo: String(roomData.correo || '') || null,
           hora_cita: String(roomData.hora_cita || '') || null,
           fecha_check_in: fechaCheckIn, // Fechas reales del room.guestConfig

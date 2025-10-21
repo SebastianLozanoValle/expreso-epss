@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { Tables } from '@/types/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 
-interface Reserva extends Tables<'informs'> {
+interface Reserva extends Omit<Tables<'informs'>, 'fecha_creacion'> {
   fecha_creacion?: string;
   is_active?: boolean;
   cancelled_by?: string;
