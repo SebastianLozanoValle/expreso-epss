@@ -12,21 +12,24 @@ export default function Home() {
       name: 'Hotel Medellín',
       description: 'Ubicado en el corazón de la ciudad de la eterna primavera',
       image: '',
-      path: '/hotel/medellin'
+      path: '/hotel/medellin',
+      price: 163841 // Precio real de Medellín
     },
     {
       id: 'cali',
       name: 'Hotel Cali',
       description: 'En la sucursal del cielo, con vista panorámica',
       image: '',
-      path: '/hotel/cali'
+      path: '/hotel/cali',
+      price: 182011 // Precio real de Cali
     },
     {
       id: 'bogota',
       name: 'Hotel Bogotá',
       description: 'En la capital, cerca de los principales centros de convenciones',
       image: '',
-      path: '/hotel/bogota'
+      path: '/hotel/bogota',
+      price: 133256 // Precio real de Bogotá
     }
   ];
 
@@ -154,7 +157,7 @@ export default function Home() {
                 </div>
                 
                 <div className="flex flex-col space-y-4">
-                  <span className="text-sm font-semibold text-green-600">Desde $182.000</span>
+                  <span className="text-sm font-semibold text-green-600">Desde ${hotel.price.toLocaleString('es-CO')}</span>
                   
                   <button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
                     Ver Disponibilidad
