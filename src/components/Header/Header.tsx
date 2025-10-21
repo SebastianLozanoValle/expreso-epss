@@ -91,6 +91,13 @@ export default function Header() {
             </button>
             
             <button
+              onClick={() => router.push('/reservas')}
+              className="text-gray-700 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Reservas
+            </button>
+            
+            <button
               onClick={() => router.push('/carga-masiva')}
               className="text-gray-700 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >

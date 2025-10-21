@@ -16,23 +16,27 @@ export type Database = {
     Tables: {
       informs: {
         Row: {
+          activa: boolean
           apellidos_y_nombres_acompañante: string | null
           apellidos_y_nombres_paciente: string | null
-          cantidad_servicios_autorizados: number | null
+          borrado_por: string | null
+          cantidad_servicios_autorizados: string | null
           correo: string | null
           descripcion_servicio: string | null
           destino: string | null
-          edad_paciente: number | null
+          edad_paciente: string | null
+          fecha_cancelacion: string | null
           fecha_check_in: string | null
           fecha_check_out: string | null
           fecha_cita: string | null
+          fecha_creacion: string
           fecha_ultima_cita: string | null
           hora_cita: string | null
           hora_ultima_cita: string | null
           hotel_asignado: string | null
           MIPRES: string | null
           numero_autorizacion: string
-          numero_contacto: number | null
+          numero_contacto: string | null
           numero_documento_acompañante: string | null
           numero_documento_paciente: string | null
           observaciones: string | null
@@ -45,23 +49,27 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          activa?: boolean
           apellidos_y_nombres_acompañante?: string | null
           apellidos_y_nombres_paciente?: string | null
-          cantidad_servicios_autorizados?: number | null
+          borrado_por?: string | null
+          cantidad_servicios_autorizados?: string | null
           correo?: string | null
           descripcion_servicio?: string | null
           destino?: string | null
-          edad_paciente?: number | null
+          edad_paciente?: string | null
+          fecha_cancelacion?: string | null
           fecha_check_in?: string | null
           fecha_check_out?: string | null
           fecha_cita?: string | null
+          fecha_creacion?: string
           fecha_ultima_cita?: string | null
           hora_cita?: string | null
           hora_ultima_cita?: string | null
           hotel_asignado?: string | null
           MIPRES?: string | null
           numero_autorizacion: string
-          numero_contacto?: number | null
+          numero_contacto?: string | null
           numero_documento_acompañante?: string | null
           numero_documento_paciente?: string | null
           observaciones?: string | null
@@ -74,23 +82,27 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          activa?: boolean
           apellidos_y_nombres_acompañante?: string | null
           apellidos_y_nombres_paciente?: string | null
-          cantidad_servicios_autorizados?: number | null
+          borrado_por?: string | null
+          cantidad_servicios_autorizados?: string | null
           correo?: string | null
           descripcion_servicio?: string | null
           destino?: string | null
-          edad_paciente?: number | null
+          edad_paciente?: string | null
+          fecha_cancelacion?: string | null
           fecha_check_in?: string | null
           fecha_check_out?: string | null
           fecha_cita?: string | null
+          fecha_creacion?: string
           fecha_ultima_cita?: string | null
           hora_cita?: string | null
           hora_ultima_cita?: string | null
           hotel_asignado?: string | null
           MIPRES?: string | null
           numero_autorizacion?: string
-          numero_contacto?: number | null
+          numero_contacto?: string | null
           numero_documento_acompañante?: string | null
           numero_documento_paciente?: string | null
           observaciones?: string | null
