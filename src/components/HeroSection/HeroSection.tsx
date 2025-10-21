@@ -43,11 +43,13 @@ export default function HeroSection() {
   const handleGuestSelect = (rooms: Room[]) => {
     setSelectedRooms(rooms);
     
-    // Guardar las configuraciones de huéspedes en el carrito
+    // Guardar las configuraciones de huéspedes en el carrito incluyendo fechas
     const configs = rooms.map(room => ({
       adults: room.adults,
       children: room.children,
-      babies: room.babies
+      babies: room.babies,
+      checkIn: selectedRange?.from?.toISOString().split('T')[0], // Formato YYYY-MM-DD
+      checkOut: selectedRange?.to?.toISOString().split('T')[0] // Formato YYYY-MM-DD
     }));
     setGuestConfigs(configs);
     

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useCart } from '@/cart/cart'
 import { DateRange } from 'react-day-picker'
 
@@ -7,13 +8,14 @@ interface BookingSummaryProps {
   selectedRate: string;
   selectedRange?: DateRange;
   nights: number;
+  city?: string;
 }
 
-export default function BookingSummary({ selectedRange, nights }: BookingSummaryProps) {
+export default function BookingSummary({ selectedRange, nights, city }: BookingSummaryProps) {
+  const router = useRouter();
   const { rooms, subTotal, clearCart, removeRoomAndUpdateGuestSelector } = useCart()
   const [total, setTotal] = useState(0)
   const [isHydrated, setIsHydrated] = useState(false)
-  const [isTaxesExpanded, setIsTaxesExpanded] = useState(false)
 
   useEffect(() => {
     setIsHydrated(true)
@@ -30,8 +32,6 @@ export default function BookingSummary({ selectedRange, nights }: BookingSummary
   }, [rooms, subTotal, isHydrated, nights])
 
   // Calcular IVA (19% del total)
-  const ivaAmount = Math.round(total * 0.19)
-  // const subtotalAmount = total - ivaAmount
 
   // Formatear fechas
   const formatDate = (date: Date) => {
@@ -154,33 +154,6 @@ export default function BookingSummary({ selectedRange, nights }: BookingSummary
           <span className="text-lg font-bold text-gray-900">Total</span>
           <span className="text-lg font-bold text-gray-900">{total.toLocaleString('es-CO')} COP</span>
         </div>
-        <button 
-          onClick={() => setIsTaxesExpanded(!isTaxesExpanded)}
-          className="flex items-center text-sm text-gray-600 mt-2 border border-blue-500 rounded px-3 py-2 w-full justify-between hover:bg-blue-50 transition-colors"
-        >
-          <span>Impuestos y tarifas incluidos</span>
-          <svg 
-            className={`w-4 h-4 transition-transform ${isTaxesExpanded ? 'rotate-180' : ''}`} 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        
-        {isTaxesExpanded && (
-          <div className="mt-3 pl-4 border-l-2 border-gray-200 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">Subtotal ({nights} noche{nights !== 1 ? 's' : ''})</span>
-              <span className="text-sm text-gray-700">{(subTotal() * nights).toLocaleString('es-CO')} COP</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">IVA (19%)</span>
-              <span className="text-sm text-gray-700">{ivaAmount.toLocaleString('es-CO')} COP</span>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="relative mb-6">
@@ -195,7 +168,23 @@ export default function BookingSummary({ selectedRange, nights }: BookingSummary
       </div>
 
       <button 
-        onClick={() => window.location.href = '/booking'}
+        onClick={() => {
+          // Obtener fechas del selectedRange
+          const checkIn = selectedRange?.from?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0];
+          const checkOut = selectedRange?.to?.toISOString().split('T')[0] || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          
+          // Usar la ciudad pasada como prop o por defecto
+          const finalCity = city || 'Bogotá';
+          
+          // Obtener cantidad de huéspedes del primer room
+          const adults = rooms[0]?.guestConfig?.adults || 1;
+          const children = rooms[0]?.guestConfig?.children || 0;
+          const babies = rooms[0]?.guestConfig?.babies || 0;
+          
+          // Redirigir con parámetros usando router
+          const bookingUrl = `/booking?checkIn=${checkIn}&checkOut=${checkOut}&city=${finalCity}&adults=${adults}&children=${children}&babies=${babies}`;
+          router.push(bookingUrl);
+        }}
         className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-lg font-semibold text-lg transition-all duration-300"
       >
         Reservar

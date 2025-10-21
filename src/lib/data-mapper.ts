@@ -154,14 +154,40 @@ export function transformCsvDataToInforms(
       }
     })
     
-    // Asignar hotel automáticamente según la ciudad
+    // Asignar hotel automáticamente según la ciudad (más flexible)
     const destino = transformedRow.destino?.toLowerCase() || '';
     let hotelAsignado = '';
-    if (destino.includes('bogotá') || destino.includes('bogota')) {
+    
+    // Normalizar destino para comparación más flexible
+    const destinoNormalizado = destino
+      .replace(/[áàäâ]/g, 'a')
+      .replace(/[éèëê]/g, 'e')
+      .replace(/[íìïî]/g, 'i')
+      .replace(/[óòöô]/g, 'o')
+      .replace(/[úùüû]/g, 'u')
+      .replace(/ñ/g, 'n')
+      .replace(/\s+/g, '')
+      .trim();
+    
+    // Detectar Bogotá con múltiples variaciones
+    if (destinoNormalizado.includes('bog') || 
+        destinoNormalizado.includes('bogota') || 
+        destinoNormalizado.includes('bogotá') ||
+        destinoNormalizado.includes('bog') ||
+        destinoNormalizado.includes('bogot')) {
       hotelAsignado = 'Ilar 74';
-    } else if (destino.includes('medellín') || destino.includes('medellin')) {
+    } 
+    // Detectar Medellín con múltiples variaciones
+    else if (destinoNormalizado.includes('med') || 
+             destinoNormalizado.includes('medellin') || 
+             destinoNormalizado.includes('medellín') ||
+             destinoNormalizado.includes('medell')) {
       hotelAsignado = 'Saana 45';
-    } else if (destino.includes('cali')) {
+    } 
+    // Detectar Cali con múltiples variaciones
+    else if (destinoNormalizado.includes('cal') || 
+             destinoNormalizado.includes('cali') ||
+             destinoNormalizado.includes('cal')) {
       hotelAsignado = 'Bulevar del Rio';
     }
     

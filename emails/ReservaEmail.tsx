@@ -42,7 +42,7 @@ export const ReservaEmail = ({ patientName = 'Estimado paciente', numeroAutoriza
         </Section>
         
         <Text style={text}>
-          Si tiene alguna pregunta o necesita asistencia, no dude en contactarnos.
+          Si tiene alguna pregunta o necesita asistencia, no dude en contactarnos.  
         </Text>
         
         <Text style={footer}>

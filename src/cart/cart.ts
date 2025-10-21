@@ -12,6 +12,8 @@ export type CartRoom = {
     adults: number
     children: number
     babies: number
+    checkIn?: string // Fecha de check-in
+    checkOut?: string // Fecha de check-out
   } // Configuración de huéspedes del GuestSelector
 }
 
@@ -19,6 +21,8 @@ type GuestConfig = {
   adults: number
   children: number
   babies: number
+  checkIn?: string // Fecha de check-in
+  checkOut?: string // Fecha de check-out
 }
 
 type CartState = {
@@ -111,17 +115,8 @@ export const useCart = create<CartState>()(
                 }
             }
             
-            // Extraer ciudad del nombre de la habitación
-            const cityMatch = room.name.match(/- (Bogotá|Medellín|Cali) -/);
-            const city = cityMatch ? cityMatch[1] : 'Bogotá';
-            
-            // Calcular precio inicial basado en la configuración y ciudad
-            const initialPrice = get().calculatePriceForGuests(
-                room.basePrice || room.price,
-                config.adults,
-                config.children,
-                city
-            )
+            // Usar el precio que ya viene calculado en la habitación
+            const initialPrice = room.price;
             
             set((state) => ({
                 rooms: [...state.rooms, { 

@@ -1,18 +1,76 @@
 'use client';
 
-import { useState } from 'react';
-import { useCart } from '@/cart/cart';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { supabase } from '@/lib/supabase';
 import { TablesInsert } from '@/types/supabase';
 
 export default function BookingPage() {
-  const { rooms } = useCart();
+  const searchParams = useSearchParams();
   const { user, loading, isAuthenticated } = useAuthRedirect();
   const [formData, setFormData] = useState<{[key: string]: {[key: string]: string | number | boolean}}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [checkIn, setCheckIn] = useState<string>('');
+  const [checkOut, setCheckOut] = useState<string>('');
+  const [city, setCity] = useState<string>('');
+
+  // Extraer parámetros de la URL
+  useEffect(() => {
+    const checkInParam = searchParams.get('checkIn');
+    const checkOutParam = searchParams.get('checkOut');
+    const cityParam = searchParams.get('city');
+    const adultsParam = searchParams.get('adults') || '1';
+    const childrenParam = searchParams.get('children') || '0';
+    const babiesParam = searchParams.get('babies') || '0';
+    
+    if (checkInParam && checkOutParam && cityParam) {
+      setCheckIn(checkInParam);
+      setCheckOut(checkOutParam);
+      setCity(cityParam);
+      
+      // Calcular precio según la ciudad y cantidad de huéspedes
+      let basePrice = 0;
+      if (cityParam === 'Bogotá') {
+        basePrice = 133256; // Precio base Bogotá
+      } else if (cityParam === 'Medellín') {
+        basePrice = 163841; // Precio base Medellín
+      } else if (cityParam === 'Cali') {
+        basePrice = 182011; // Precio base Cali
+      }
+      
+      // Calcular precio según cantidad de huéspedes
+      const totalGuests = parseInt(adultsParam) + parseInt(childrenParam) + parseInt(babiesParam);
+      let finalPrice = basePrice;
+      
+      if (totalGuests === 1) {
+        finalPrice = basePrice; // Solo usuario
+      } else if (totalGuests === 2) {
+        finalPrice = Math.round(basePrice * 1.5); // Usuario + acompañante
+      } else if (totalGuests >= 3) {
+        finalPrice = basePrice * 2; // Usuario + 2+ acompañantes
+      }
+      
+      // Crear habitación virtual con los parámetros
+      const virtualRoom = {
+        id: 'virtual-room',
+        name: `Habitación - ${cityParam}`,
+        price: finalPrice,
+        guestConfig: {
+          adults: parseInt(adultsParam),
+          children: parseInt(childrenParam),
+          babies: parseInt(babiesParam),
+          checkIn: checkInParam,
+          checkOut: checkOutParam
+        }
+      };
+      
+      setRooms([virtualRoom]);
+    }
+  }, [searchParams]);
 
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
@@ -41,8 +99,9 @@ export default function BookingPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">No hay habitaciones seleccionadas</h1>
-          <p className="text-gray-600">Debes seleccionar al menos una habitación para continuar.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Parámetros requeridos</h1>
+          <p className="text-gray-600">Esta página requiere los parámetros: checkIn, checkOut y city.</p>
+          <p className="text-gray-500 mt-2">Ejemplo: /booking?checkIn=2025-11-27&checkOut=2025-11-29&city=Bogotá</p>
         </div>
       </div>
     );
@@ -141,19 +200,22 @@ export default function BookingPage() {
       rooms.forEach(room => {
         const roomData = formData[room.id] || {};
         
-        // Extraer ciudad del nombre de la habitación (ej: "Habitación - Medellín - Usuario + Acompañante")
-        const cityMatch = room.name.match(/- (Bogotá|Medellín|Cali) -/);
-        const city = cityMatch ? cityMatch[1] : 'Bogotá';
+        // Usar la ciudad de los parámetros de la URL
+        const cityFromParams = city || 'Bogotá';
         
         // Asignar hotel según la ciudad
         let hotelAsignado = '';
-        if (city === 'Bogotá') {
+        if (cityFromParams === 'Bogotá') {
           hotelAsignado = 'Ilar 74';
-        } else if (city === 'Medellín') {
+        } else if (cityFromParams === 'Medellín') {
           hotelAsignado = 'Saana 45';
-        } else if (city === 'Cali') {
+        } else if (cityFromParams === 'Cali') {
           hotelAsignado = 'Bulevar del Rio';
         }
+        
+        // Usar las fechas de los parámetros de la URL
+        const fechaCheckIn = checkIn || null;
+        const fechaCheckOut = checkOut || null;
         
         // Crear objeto con solo los campos que tienen valor
         const insertData: TablesInsert<'informs'> = {
@@ -167,7 +229,7 @@ export default function BookingPage() {
           edad_paciente: typeof roomData.edad_paciente === 'number' ? roomData.edad_paciente : parseInt(String(roomData.edad_paciente)) || null,
           regimen: String(roomData.regimen || ''),
           descripcion_servicio: 'Habitación Estándar', // Siempre habitación estándar
-          destino: city, // Asignar ciudad automáticamente
+          destino: cityFromParams, // Usar ciudad de los parámetros de la URL
           numero_autorizacion: String(roomData.numero_autorizacion || ''),
           fecha_cita: String(roomData.fecha_cita || ''),
           
@@ -176,8 +238,8 @@ export default function BookingPage() {
           numero_contacto: typeof roomData.numero_contacto === 'number' ? roomData.numero_contacto : (roomData.numero_contacto ? parseInt(String(roomData.numero_contacto)) : null),
           correo: String(roomData.correo || '') || null,
           hora_cita: String(roomData.hora_cita || '') || null,
-          fecha_check_in: null, // Se asignará automáticamente desde la página anterior
-          fecha_check_out: null, // Se asignará automáticamente desde la página anterior
+          fecha_check_in: fechaCheckIn, // Fechas reales del room.guestConfig
+          fecha_check_out: fechaCheckOut, // Fechas reales del room.guestConfig
           hotel_asignado: hotelAsignado, // Asignar hotel automáticamente según ciudad
           observaciones: String(roomData.observaciones || '') || null,
           requiere_acompañante: Boolean(roomData.requiere_acompañante),
@@ -201,7 +263,32 @@ export default function BookingPage() {
         throw error;
       }
       
-      setSuccessMessage(`¡Reserva realizada exitosamente! Se han registrado ${dataToInsert.length} reserva${dataToInsert.length !== 1 ? 's' : ''}.`);
+      // Enviar correo de confirmación para cada reserva
+      for (const reservation of dataToInsert) {
+        try {
+          const emailResponse = await fetch('/api/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              to: user?.email || 'sebdevcol@gmail.com', // Usar email del usuario logueado
+              patientName: reservation.apellidos_y_nombres_paciente,
+              numeroAutorizacion: reservation.numero_autorizacion
+            }),
+          });
+          
+          if (!emailResponse.ok) {
+            console.error('Error enviando correo para reserva:', reservation.numero_autorizacion);
+          } else {
+            console.log('Correo enviado exitosamente para reserva:', reservation.numero_autorizacion);
+          }
+        } catch (emailError) {
+          console.error('Error enviando correo:', emailError);
+        }
+      }
+      
+      setSuccessMessage(`¡Reserva realizada exitosamente! Se han registrado ${dataToInsert.length} reserva${dataToInsert.length !== 1 ? 's' : ''} y se han enviado los correos de confirmación.`);
       
       // Limpiar formulario después del éxito
       setFormData({});
@@ -222,6 +309,33 @@ export default function BookingPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Completar Reserva</h1>
           <p className="text-gray-600">Proporciona la información requerida para cada habitación</p>
+          
+          {/* Mostrar información de la reserva */}
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-blue-900">Ciudad:</span>
+                <span className="ml-2 text-blue-700">{city}</span>
+              </div>
+              <div>
+                <span className="font-medium text-blue-900">Check-in:</span>
+                <span className="ml-2 text-blue-700">{checkIn}</span>
+              </div>
+              <div>
+                <span className="font-medium text-blue-900">Check-out:</span>
+                <span className="ml-2 text-blue-700">{checkOut}</span>
+              </div>
+              <div>
+                <span className="font-medium text-blue-900">Huéspedes:</span>
+                <span className="ml-2 text-blue-700">
+                  {rooms[0]?.guestConfig ? 
+                    `${rooms[0].guestConfig.adults + rooms[0].guestConfig.children + rooms[0].guestConfig.babies} persona(s)` : 
+                    'N/A'
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
           
           {successMessage && (
             <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
@@ -330,7 +444,10 @@ function RoomForm({ room, roomIndex, formData, onInputChange, errors }: RoomForm
             <div>
               <h3 className="text-lg font-semibold text-gray-900">{room.name}</h3>
               <p className="text-sm text-gray-600">
-                2 huéspedes
+                {room.guestConfig ? 
+                  `${room.guestConfig.adults + room.guestConfig.children + room.guestConfig.babies} huésped${(room.guestConfig.adults + room.guestConfig.children + room.guestConfig.babies) !== 1 ? 'es' : ''}` : 
+                  '1 huésped'
+                }
               </p>
             </div>
           </div>

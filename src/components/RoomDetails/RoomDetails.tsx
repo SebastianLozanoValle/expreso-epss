@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/cart/cart';
 import RoomInfoModal from '@/components/RoomInfoModal/RoomInfoModal';
 
@@ -7,9 +8,12 @@ interface RoomDetailsProps {
   selectedRate: string;
   onRateSelect: (rate: string) => void;
   selectedCity?: string;
+  checkIn?: string;
+  checkOut?: string;
 }
 
-export default function RoomDetails({ selectedRate, onRateSelect, selectedCity = 'Bogotá' }: RoomDetailsProps) {
+export default function RoomDetails({ selectedRate, onRateSelect, selectedCity = 'Bogotá', checkIn, checkOut }: RoomDetailsProps) {
+  const router = useRouter();
   const { addRoomAutoLink } = useCart();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalRoomType, setModalRoomType] = useState('');
@@ -82,23 +86,30 @@ export default function RoomDetails({ selectedRate, onRateSelect, selectedCity =
     const room = rooms.find(r => r.id === roomId);
     const rate = room?.rates.find(r => r.id === rateId);
     if (room && rate) {
+      // Usar las fechas pasadas como props o fechas por defecto
+      const checkInDate = checkIn || new Date().toISOString().split('T')[0];
+      const checkOutDate = checkOut || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
       // Determinar cantidad de huéspedes basándose en el tipo de plan
-      let guests = 2; // Por defecto
+      let adults = 1; // Por defecto
       if (rateId === 'solo-usuario') {
-        guests = 1;
+        adults = 1;
       } else if (rateId === 'usuario-acompañante') {
-        guests = 2;
+        adults = 2;
       } else if (rateId === 'usuario-dos-acompañantes') {
-        guests = 3;
+        adults = 3;
       }
       
-      // Crear configuración de huéspedes basada en el plan
+      // Crear configuración de huéspedes
       const guestConfig = {
-        adults: guests,
+        adults: adults,
         children: 0,
-        babies: 0
+        babies: 0,
+        checkIn: checkInDate,
+        checkOut: checkOutDate
       };
       
+      // Agregar al carrito en lugar de redirigir
       addRoomAutoLink({
         id: `${roomId}-${rateId}`,
         name: `${room.name} - ${rate.name}`,

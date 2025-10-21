@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 // import HeroSection from '@/components/HeroSection/HeroSection';
@@ -59,9 +59,14 @@ export default function HotelPage() {
   
   // Protección de autenticación
   const { loading } = useAuthRedirect();
-  const { setGuestConfigs, setPreConfiguredRooms } = useCart();
+  const { setGuestConfigs, setPreConfiguredRooms, clearCart } = useCart();
 
   const hotel = hotelData[hotelId as keyof typeof hotelData];
+
+  // Limpiar carrito cuando cambie la ciudad
+  useEffect(() => {
+    clearCart();
+  }, [hotelId, clearCart]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('es-ES', { 
@@ -285,7 +290,9 @@ export default function HotelPage() {
               <RoomDetails 
                 selectedRate={selectedRate} 
                 onRateSelect={setSelectedRate}
-                selectedCity={hotel.name.split(' ')[1]} // Extraer ciudad del nombre del hotel
+                selectedCity={hotelId === 'cali' ? 'Cali' : hotelId === 'medellin' ? 'Medellín' : hotelId === 'bogota' ? 'Bogotá' : 'Bogotá'} // Usar hotelId directamente
+                checkIn={selectedRange?.from?.toISOString().split('T')[0]}
+                checkOut={selectedRange?.to?.toISOString().split('T')[0]}
               />
             </div>
             <div className="lg:col-span-1">
@@ -293,6 +300,7 @@ export default function HotelPage() {
                 selectedRate={selectedRate} 
                 selectedRange={selectedRange}
                 nights={calculateNights()}
+                city={hotelId === 'cali' ? 'Cali' : hotelId === 'medellin' ? 'Medellín' : hotelId === 'bogota' ? 'Bogotá' : 'Bogotá'}
               />
             </div>
           </div>

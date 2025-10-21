@@ -6,41 +6,14 @@ import { saveAs } from 'file-saver';
 import { supabase } from '@/lib/supabase';
 // Removed server-side dependencies
 
-// Datos basados en el JSON proporcionado
-const sampleData = {
-  numero_autorizacion: "298756457",
-  tipo_documento_paciente: "CC",
-  numero_documento_paciente: "102238",
-  apellidos_y_nombres_paciente: "RODRIGUEZ RODRIGUEZ LINA",
-  edad_paciente: 30,
-  regimen: "S",
-  descripcion_servicio: "HOTEL HABITACION SENCILLA YOPAL",
-  destino: "YOPAL",
-  cantidad_servicios_autorizados: 8,
-  numero_contacto: "3100000000",
-  requiere_acompañante: false,
-  tipo_documento_acompañante: "N/A",
-  numero_documento_acompañante: "N/A",
-  apellidos_y_nombres_acompañante: "N/A",
-  parentesco_acompañante: "N/A",
-  fecha_cita: "2025-09-30",
-  hora_cita: "07:00",
-  fecha_ultima_cita: "2025-10-01",
-  hora_ultima_cita: "06:00",
-  POS: "ejemplo",
-  MIPRES: "ejemplo",
-  fecha_check_in: "2025-09-29",
-  fecha_check_out: "2025-10-02",
-  correo: "rodriguez@hotmail.com",
-  hotel_asignado: "Ilar 74",
-  observaciones: "SOLO SERVICIO DE ALOJAMIENTO NO CUBRE TRANSPORTES NI ALIMENTACION"
-};
+// NO MÁS DATOS DE EJEMPLO - SOLO DATOS REALES DE LA BASE DE DATOS
 
 function GenerarPDFContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [patientData, setPatientData] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const searchParams = useSearchParams();
   const numeroAutorizacion = searchParams.get('auth');
@@ -56,22 +29,26 @@ function GenerarPDFContent() {
       try {
         console.log('Buscando datos para autorización:', numeroAutorizacion);
         
+        // Forzar una consulta fresca sin caché
         const { data, error } = await supabase
           .from('informs')
           .select('*')
           .eq('numero_autorizacion', numeroAutorizacion)
-          .maybeSingle();
+          .maybeSingle()
+          .abortSignal(AbortSignal.timeout(10000)); // Timeout de 10 segundos
 
         console.log('Resultado de la consulta:', { data, error });
+        console.log('Número de autorización buscado:', numeroAutorizacion);
 
         if (error) {
           console.error('Error loading patient data:', error);
           setMessage(`Error al cargar los datos del paciente: ${error.message}`);
         } else if (data) {
-          console.log('Datos del paciente cargados:', data);
+          console.log('✅ DATOS REALES ENCONTRADOS:', data);
           setPatientData(data);
           setMessage(''); // Limpiar mensaje de error si hay datos
         } else {
+          console.log('❌ NO SE ENCONTRARON DATOS para:', numeroAutorizacion);
           setMessage('No se encontraron datos para este número de autorización');
         }
       } catch (err) {
@@ -83,7 +60,25 @@ function GenerarPDFContent() {
     };
 
     loadPatientData();
-  }, [numeroAutorizacion]);
+  }, [numeroAutorizacion, retryCount]);
+
+  // Función para forzar recarga de datos
+  const forceReloadData = async () => {
+    setRetryCount(prev => prev + 1);
+    setMessage('Recargando datos...');
+    setPatientData(null);
+    
+    // Limpiar caché del navegador
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.map(cacheName => caches.delete(cacheName))
+      );
+    }
+    
+    // Recargar datos
+    await loadPatientData();
+  };
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -100,8 +95,13 @@ function GenerarPDFContent() {
     setMessage('');
 
     try {
-      // Usar datos del paciente o datos de ejemplo si no hay datos
-      const dataToUse = patientData || sampleData;
+      // SOLO usar datos reales del paciente
+      if (!patientData) {
+        setMessage('Error: No hay datos del paciente para generar el PDF');
+        return;
+      }
+      
+      const dataToUse = patientData;
       
       // Preparar los datos para enviar a la API
       const requestData = {
@@ -159,7 +159,8 @@ function GenerarPDFContent() {
     );
   }
 
-  const dataToShow = patientData || sampleData;
+  // Solo mostrar datos reales, no datos de ejemplo
+  const dataToShow = patientData;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -173,25 +174,35 @@ function GenerarPDFContent() {
             <p className="text-sm text-blue-800">
               <strong>Número de autorización:</strong> {numeroAutorizacion}
             </p>
+            <p className="text-xs text-blue-600 mt-1">
+              Intento #{retryCount + 1} • {patientData ? 'Datos cargados' : 'Sin datos'}
+            </p>
           </div>
         )}
         
         <div className="space-y-4">
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2 text-gray-800">Datos del paciente:</h3>
-            <p className="text-sm text-gray-700"><strong className="text-gray-900">Nombre:</strong> {dataToShow.apellidos_y_nombres_paciente}</p>
-            <p className="text-sm text-gray-700"><strong className="text-gray-900">Documento:</strong> {dataToShow.numero_documento_paciente}</p>
-            <p className="text-sm text-gray-700"><strong className="text-gray-900">Hotel:</strong> {dataToShow.hotel_asignado}</p>
-            <p className="text-sm text-gray-700"><strong className="text-gray-900">Check-in:</strong> {formatDate(dataToShow.fecha_check_in)}</p>
-            <p className="text-sm text-gray-700"><strong className="text-gray-900">Check-out:</strong> {formatDate(dataToShow.fecha_check_out)}</p>
-          </div>
+          {dataToShow ? (
+            <div className="bg-gray-100 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2 text-gray-800">Datos del paciente:</h3>
+              <p className="text-sm text-gray-700"><strong className="text-gray-900">Nombre:</strong> {dataToShow.apellidos_y_nombres_paciente}</p>
+              <p className="text-sm text-gray-700"><strong className="text-gray-900">Documento:</strong> {dataToShow.numero_documento_paciente}</p>
+              <p className="text-sm text-gray-700"><strong className="text-gray-900">Hotel:</strong> {dataToShow.hotel_asignado}</p>
+              <p className="text-sm text-gray-700"><strong className="text-gray-900">Check-in:</strong> {formatDate(new Date(new Date(dataToShow.fecha_check_in).getTime() + 24 * 60 * 60 * 1000).toISOString())}</p>
+              <p className="text-sm text-gray-700"><strong className="text-gray-900">Check-out:</strong> {formatDate(new Date(new Date(dataToShow.fecha_check_out).getTime() + 24 * 60 * 60 * 1000).toISOString())}</p>
+            </div>
+          ) : (
+            <div className="bg-red-100 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2 text-red-800">⚠️ Sin datos del paciente</h3>
+              <p className="text-sm text-red-700">No se encontraron datos para este número de autorización.</p>
+            </div>
+          )}
           
           <button
             onClick={handleGeneratePDF}
-            disabled={isLoading}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            disabled={isLoading || !dataToShow}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors"
           >
-            {isLoading ? 'Generando...' : 'Descargar comprobante'}
+            {isLoading ? 'Generando...' : dataToShow ? 'Descargar comprobante' : 'Sin datos para generar'}
           </button>
           
           {message && (
@@ -202,6 +213,15 @@ function GenerarPDFContent() {
             }`}>
               {message}
             </div>
+          )}
+          
+          {message && message.includes('No se encontraron datos') && (
+            <button
+              onClick={forceReloadData}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+            >
+              🔄 Recargar datos (Intento #{retryCount + 1})
+            </button>
           )}
           
           <button
