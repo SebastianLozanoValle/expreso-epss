@@ -34,8 +34,7 @@ function GenerarPDFContent() {
           .from('informs')
           .select('*')
           .eq('numero_autorizacion', numeroAutorizacion)
-          .maybeSingle()
-          .abortSignal(AbortSignal.timeout(10000)); // Timeout de 10 segundos
+          .maybeSingle();
 
         console.log('Resultado de la consulta:', { data, error });
         console.log('Número de autorización buscado:', numeroAutorizacion);
@@ -76,8 +75,7 @@ function GenerarPDFContent() {
       );
     }
     
-    // Recargar datos
-    await loadPatientData();
+    // Recargar datos - el useEffect se ejecutará automáticamente
   };
 
   const formatDate = (dateStr: string) => {
