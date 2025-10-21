@@ -7,7 +7,7 @@ import { useAuthStore } from '@/lib/auth-store'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
+  // const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -30,15 +30,18 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { error } = isSignUp
-        ? await signUp(email, password)
-        : await signIn(email, password)
+      const { error } = 
+      // isSignUp
+      //   ? await signUp(email, password)
+      //   : 
+        await signIn(email, password)
 
       if (error) {
         setError(error.message)
-      } else if (isSignUp) {
-        setError('Revisa tu correo para confirmar tu cuenta')
-      }
+      } 
+      // else if (isSignUp) {
+      //   setError('Revisa tu correo para confirmar tu cuenta')
+      // }
       } catch {
       setError('Ocurrió un error inesperado')
     } finally {
@@ -56,10 +59,12 @@ export default function LoginPage() {
             </svg>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
+            Iniciar sesión
+            {/*isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}*/}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {isSignUp ? 'Crea tu cuenta para continuar' : 'Ingresa a tu cuenta'}
+            Ingresa a tu cuenta
+            {/*isSignUp ? 'Crea tu cuenta para continuar' : 'Ingresa a tu cuenta'}*/}
           </p>
         </div>
 
@@ -129,12 +134,13 @@ export default function LoginPage() {
                   Procesando...
                 </div>
               ) : (
-                isSignUp ? 'Crear cuenta' : 'Iniciar sesión'
+                //isSignUp ? 'Crear cuenta' : 'Iniciar sesión'
+                'Iniciar sesión'
               )}
             </button>
           </div>
 
-          <div className="text-center">
+          {/* <div className="text-center">
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
@@ -145,7 +151,7 @@ export default function LoginPage() {
                 : '¿No tienes cuenta? Regístrate'
               }
             </button>
-          </div>
+          </div> */}
         </form>
 
         <div className="mt-6">
