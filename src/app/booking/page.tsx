@@ -239,7 +239,7 @@ function BookingPageContent() {
           apellidos_y_nombres_paciente: String(roomData.apellidos_y_nombres_paciente || ''),
           edad_paciente: String(roomData.edad_paciente || ''),
           regimen: String(roomData.regimen || ''),
-          descripcion_servicio: 'Habitación Estándar', // Siempre habitación estándar
+          descripcion_servicio: `Habitación Estándar${roomData.descripcion_servicio ? ` / ${roomData.descripcion_servicio}` : ''}`, // Tipo de habitación + observaciones
           destino: cityFromParams, // Usar ciudad de los parámetros de la URL
           numero_autorizacion: String(roomData.numero_autorizacion || ''),
           fecha_cita: String(roomData.fecha_cita || ''),

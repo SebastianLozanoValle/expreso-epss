@@ -5,6 +5,7 @@ import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { supabase } from '@/lib/supabase';
 import { Tables } from '@/types/supabase';
 import toast, { Toaster } from 'react-hot-toast';
+import DownloadModal from '@/components/DownloadModal/DownloadModal';
 
 interface Reserva extends Omit<Tables<'informs'>, 'fecha_creacion'> {
   fecha_creacion?: string;
@@ -355,6 +356,16 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-700">Descripción del Servicio</label>
+                <p className="mt-1 text-sm text-gray-900">
+                  {reserva.descripcion_servicio && reserva.descripcion_servicio.includes(' / ') 
+                    ? reserva.descripcion_servicio.split(' / ')[1] || ''
+                    : reserva.descripcion_servicio || ''
+                  }
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700">Tipo de Habitación</label>
                 <p className="mt-1 text-sm text-gray-900">Habitación Estándar</p>
               </div>
@@ -507,6 +518,8 @@ function ReservasContent() {
   const [loadingReservas, setLoadingReservas] = useState(true);
   const [selectedReserva, setSelectedReserva] = useState<Reserva | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [downloadReserva, setDownloadReserva] = useState<Reserva | null>(null);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -647,6 +660,12 @@ function ReservasContent() {
   const verDetalles = (reserva: Reserva) => {
     setSelectedReserva(reserva);
     setIsModalOpen(true);
+  };
+
+  // Abrir modal de descarga
+  const abrirDescarga = (reserva: Reserva) => {
+    setDownloadReserva(reserva);
+    setIsDownloadModalOpen(true);
   };
 
   // Guardar cambios en la reserva
@@ -931,6 +950,15 @@ function ReservasContent() {
                             >
                               Ver Detalles
                             </button>
+                            <button
+                              onClick={() => abrirDescarga(reserva)}
+                              className="text-blue-600 hover:text-blue-900 transition-colors"
+                              title="Descargar"
+                            >
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                            </button>
                             {reserva.activa !== false && (
                               <button
                                 onClick={() => {
@@ -1036,6 +1064,16 @@ function ReservasContent() {
           setSelectedReserva(null);
         }}
         onSave={handleSaveReserva}
+      />
+
+      {/* Modal de descarga */}
+      <DownloadModal
+        reserva={downloadReserva}
+        isOpen={isDownloadModalOpen}
+        onClose={() => {
+          setIsDownloadModalOpen(false);
+          setDownloadReserva(null);
+        }}
       />
 
       {/* Toast notifications */}

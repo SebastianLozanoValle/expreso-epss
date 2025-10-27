@@ -119,6 +119,47 @@ export async function POST(request: NextRequest) {
     pdf.text('Apreciados Señores,', 20, 140);
     pdf.text('Confirmamos Reserva de la siguiente manera:', 20, 150);
     
+    // Parsear descripcion_servicio para separar tipo de habitación y observaciones
+    let tipoHabitacion = 'Habitación Estándar';
+    let observacionesReales = data.observaciones || '';
+    let incluyeValue = ''; // Incluye = descripcion_servicio (exactamente igual)
+    
+    if (data.descripcion_servicio && data.descripcion_servicio.includes(' / ')) {
+      const partes = data.descripcion_servicio.split(' / ');
+      tipoHabitacion = partes[0] || 'Habitación Estándar';
+      observacionesReales = partes[1] || observacionesReales;
+      incluyeValue = partes[1] || ''; // Incluye = parte después del /
+    } else {
+      // Si no hay /, incluyeValue = descripcion_servicio completo
+      observacionesReales = data.descripcion_servicio || '';
+      incluyeValue = data.descripcion_servicio || ''; // Incluye = descripcion_servicio completo
+    }
+
+    // Función para dividir texto en líneas
+    const splitTextIntoLines = (text: string, maxWidth: number) => {
+      const words = text.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        if (pdf.getTextWidth(testLine) <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            lines.push(word);
+          }
+        }
+      }
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      return lines;
+    };
+
     // Detalles de la reserva
     let yPosition = 170;
     const lineHeight = 6; // Reducir espaciado entre líneas
@@ -228,49 +269,42 @@ export async function POST(request: NextRequest) {
     const details = [
       { label: 'Fecha de Llegada:', value: formatDateForDisplay(data.fecha_llegada) },
       { label: 'Fecha de Salida:', value: formatDateForDisplay(data.fecha_salida) },
-      { label: 'Tipo de Habitación:', value: "Habitación Estándar" },
+      { label: 'Tipo de Habitación:', value: tipoHabitacion },
       { label: 'Tarifa Antes de Impuestos:', value: tarifaTotal > 0 ? `$${tarifaTotal.toLocaleString('es-CO')}` : '$0' },
       { label: 'Cantidad de Habitaciones:', value: '1' },
       { label: 'Adultos:', value: cantidadInquilinos.toString() },
-      { label: 'Incluye:', value: 'Alojamiento' },
+      { label: 'Incluye:', value: incluyeValue },
       { label: 'Confirmado Por:', value: 'Sistema de Reservas' },
       { label: 'Forma de Pago:', value: 'EPS' }
     ];
     
     details.forEach(detail => {
       pdf.text(detail.label, 20, yPosition);
-      pdf.text(detail.value, 120, yPosition);
-      yPosition += lineHeight;
+      if (detail.label === 'Incluye:') {
+        // Aplicar salto de línea automático para "Incluye"
+        if (detail.value && detail.value.trim()) {
+          const observacionesLines = splitTextIntoLines(detail.value, 60);
+          observacionesLines.forEach((line, index) => {
+            pdf.text(line, 120, yPosition);
+            yPosition += lineHeight;
+          });
+        } else {
+          // Si está vacío, mostrar vacío pero mantener el espacio
+          pdf.text('', 120, yPosition);
+          yPosition += lineHeight;
+        }
+      } else {
+        pdf.text(detail.value, 120, yPosition);
+        yPosition += lineHeight;
+      }
     });
+    
+    // Salto de línea adicional después de detalles
+    yPosition += lineHeight;
     
     // Observaciones con salto de línea automático
     pdf.text('Observaciones:', 20, yPosition);
-    const observaciones = data.observaciones || 'N/A';
-    
-    // Función para dividir texto en líneas
-    const splitTextIntoLines = (text: string, maxWidth: number) => {
-      const words = text.split(' ');
-      const lines: string[] = [];
-      let currentLine = '';
-      
-      for (const word of words) {
-        const testLine = currentLine + (currentLine ? ' ' : '') + word;
-        if (pdf.getTextWidth(testLine) <= maxWidth) {
-          currentLine = testLine;
-        } else {
-          if (currentLine) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            lines.push(word);
-          }
-        }
-      }
-      if (currentLine) {
-        lines.push(currentLine);
-      }
-      return lines;
-    };
+    const observaciones = observacionesReales || 'N/A';
     
     // Dividir observaciones en líneas
     const observacionesLines = splitTextIntoLines(observaciones, 60); // 60 caracteres máximo por línea
