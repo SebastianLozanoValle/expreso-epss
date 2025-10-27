@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     
     // Huésped con información adicional
     pdf.text('Huésped(es):', 20, yPosition);
-    pdf.text(data.nombre_paciente || 'N/A', 120, yPosition);
+    pdf.text((data.nombre_paciente || 'N/A').toUpperCase(), 120, yPosition);
     yPosition += lineHeight;
     
     // Número de documento del paciente
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     
     // Acompañante si existe
     if (data.acompañante) {
-      pdf.text(`Acompañante: ${data.acompañante}`, 120, yPosition);
+      pdf.text(`Acompañante: ${data.acompañante.toUpperCase()}`, 120, yPosition);
       yPosition += lineHeight;
       
       // Número de documento del acompañante si existe
