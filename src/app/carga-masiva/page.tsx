@@ -7,6 +7,109 @@ import { TablesInsert } from '@/types/supabase';
 import { supabase } from '@/lib/supabase';
 import { transformCsvDataToInforms, generateCsvTemplate } from '@/lib/data-mapper';
 
+// Funciones de conversión (copiadas del data-mapper para uso directo)
+function convertToISODate(dateString: string): string | null {
+  if (!dateString || dateString.trim() === '' || dateString.toUpperCase() === 'N/A') {
+    return null;
+  }
+  
+  try {
+    const cleanDateString = dateString.trim().replace(/[^\d\/\-]/g, '');
+    
+    if (cleanDateString.includes('/')) {
+      const parts = cleanDateString.split('/');
+      if (parts.length === 3) {
+        const part1 = parseInt(parts[0]);
+        const part2 = parseInt(parts[1]);
+        const year = parseInt(parts[2]);
+        
+        let month, day;
+        
+        if (part1 > 12) {
+          day = part1;
+          month = part2;
+        } else if (part2 > 12) {
+          month = part1;
+          day = part2;
+        } else {
+          month = part1;
+          day = part2;
+        }
+        
+        if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900 || year > 2100) {
+          return null;
+        }
+        
+        const date = new Date(year, month - 1, day);
+        
+        if (isNaN(date.getTime())) {
+          return null;
+        }
+        
+        return date.toISOString().split('T')[0];
+      }
+    }
+    
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDateString)) {
+      const date = new Date(cleanDateString);
+      if (!isNaN(date.getTime())) {
+        return cleanDateString;
+      }
+    }
+    
+    return null;
+    
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizeTime(timeString: string): string | null {
+  if (!timeString || timeString.trim() === '' || timeString.toUpperCase() === 'N/A') {
+    return null;
+  }
+  
+  try {
+    const cleanTime = timeString.trim().toUpperCase();
+    
+    if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
+      const [hours, minutes] = cleanTime.split(':').map(Number);
+      if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+    }
+    
+    if (/^\d{1,2}:\d{2}\s*(AM|PM)$/.test(cleanTime)) {
+      const match = cleanTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        const period = match[3];
+        
+        if (minutes >= 0 && minutes <= 59) {
+          if (period === 'AM') {
+            if (hours === 12) hours = 0;
+            if (hours >= 0 && hours <= 11) {
+              return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+          } else if (period === 'PM') {
+            if (hours === 12) hours = 12;
+            if (hours >= 1 && hours <= 11) {
+              hours += 12;
+              return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+          }
+        }
+      }
+    }
+    
+    return timeString;
+    
+  } catch (error) {
+    return timeString;
+  }
+}
+
 export default function CargaMasivaPage() {
   const router = useRouter();
   
@@ -172,7 +275,7 @@ export default function CargaMasivaPage() {
     addLog('Iniciando carga masiva a la base de datos...');
     
     try {
-      // Usar datos transformados si existen, sino usar datos originales
+      // Usar datos transformados si existen, sino usar datos originales con conversión de fechas/horas
       const dataToUpload = transformedData.length > 0 ? transformedData : fileData.map(row => {
         const rowData: {[key: string]: string | number | boolean | null} = {
           user_id: user?.id || '',
@@ -210,14 +313,17 @@ export default function CargaMasivaPage() {
           rowData.numero_documento_acompañante = row[12] !== 'N/A' ? row[12] : null; // N/A
           rowData.apellidos_y_nombres_acompañante = row[13] !== 'N/A' ? row[13] : null; // N/A
           rowData.parentesco_acompañante = row[14] !== 'N/A' ? row[14] : null; // N/A
-          rowData.fecha_cita = row[15] || null; // 9/30/2025
-          rowData.hora_cita = row[16] || null; // 11:00 AM
-          rowData.fecha_ultima_cita = row[17] !== 'N/A' ? row[17] : null; // N/A
-          rowData.hora_ultima_cita = row[18] !== 'N/A' ? row[18] : null; // N/A
+          
+          // CONVERSIÓN DE FECHAS Y HORAS
+          rowData.fecha_cita = convertToISODate(row[15]) || null; // 9/30/2025 → 2025-09-30
+          rowData.hora_cita = normalizeTime(row[16]) || null; // 11:00 AM → 11:00
+          rowData.fecha_ultima_cita = row[17] !== 'N/A' ? convertToISODate(row[17]) || null : null; // N/A
+          rowData.hora_ultima_cita = row[18] !== 'N/A' ? normalizeTime(row[18]) || null : null; // N/A
+          
           rowData.POS = row[19] === 'POS'; // NO POS
           rowData.MIPRES = row[20] || null; // 1234567812
-          rowData.fecha_check_in = row[21] || null; // 9/30/2025
-          rowData.fecha_check_out = row[22] || null; // 31/09/2025
+          rowData.fecha_check_in = convertToISODate(row[21]) || null; // 9/30/2025 → 2025-09-30
+          rowData.fecha_check_out = convertToISODate(row[22]) || null; // 31/09/2025 → 2025-09-31
           rowData.correo = row[23] || null; // rodriguez@hotmail.com
           rowData.hotel_asignado = hotelAsignado || (row[24] !== '-' ? row[24] : null); // Usar asignación automática o valor del CSV
           rowData.observaciones = row[25] || null; // SOLO SERVICIO DE ALOJAMIENTO...

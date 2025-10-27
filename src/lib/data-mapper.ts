@@ -136,12 +136,16 @@ export function transformCsvDataToInforms(
         case 'fecha_check_in':
         case 'fecha_check_out':
           if (value && value !== '') {
-            // Convertir fecha al formato ISO para la base de datos
+            // CONVERSIÓN OBLIGATORIA - siempre convertir al formato estándar
             const isoDate = convertToISODate(value)
             if (isoDate) {
               transformedRow[fieldName] = isoDate
             } else {
-              transformedRow[fieldName] = value
+              // Solo mostrar error si NO es un valor esperado como N/A
+              if (value.toUpperCase() !== 'N/A' && value.trim() !== '') {
+                console.error(`❌ FECHA NO CONVERTIBLE: "${value}" - usando fecha por defecto`)
+              }
+              transformedRow[fieldName] = null
             }
           } else {
             transformedRow[fieldName] = null
@@ -151,9 +155,20 @@ export function transformCsvDataToInforms(
         case 'hora_cita':
         case 'hora_ultima_cita':
           if (value && value !== '') {
-            // Normalizar formato de hora
+            // CONVERSIÓN OBLIGATORIA - siempre normalizar formato de hora
             const normalizedTime = normalizeTime(value)
-            transformedRow[fieldName] = normalizedTime
+            if (normalizedTime && normalizedTime !== value) {
+              console.log(`✅ Hora convertida: "${value}" → "${normalizedTime}"`)
+              transformedRow[fieldName] = normalizedTime
+            } else if (normalizedTime) {
+              transformedRow[fieldName] = normalizedTime
+            } else {
+              // Solo mostrar error si NO es un valor esperado como N/A
+              if (value.toUpperCase() !== 'N/A' && value.trim() !== '') {
+                console.error(`❌ HORA NO CONVERTIBLE: "${value}" - usando valor original`)
+              }
+              transformedRow[fieldName] = value
+            }
           } else {
             transformedRow[fieldName] = null
           }
@@ -299,136 +314,106 @@ function isValidDate(dateString: string): boolean {
   }
 }
 
-// Función para convertir fechas al formato ISO
+// Función para convertir fechas al formato ISO - SIMPLE Y DIRECTO
 function convertToISODate(dateString: string): string | null {
-  if (!dateString || dateString.trim() === '') return null
+  if (!dateString || dateString.trim() === '' || dateString.toUpperCase() === 'N/A') {
+    return null;
+  }
   
   try {
     // Limpiar la cadena de fecha
     const cleanDateString = dateString.trim().replace(/[^\d\/\-]/g, '');
     
-    // Manejar diferentes formatos de fecha
-    let date: Date
+    console.log(`🔄 Convirtiendo fecha: "${dateString}" → "${cleanDateString}"`);
     
-    // Formato YYYY-MM-DD (ya está en formato correcto)
+    // Solo manejar formatos con slash (M/D/YYYY o MM/DD/YYYY)
+    if (cleanDateString.includes('/')) {
+      const parts = cleanDateString.split('/');
+      if (parts.length === 3) {
+        const part1 = parseInt(parts[0]);
+        const part2 = parseInt(parts[1]);
+        const year = parseInt(parts[2]);
+        
+        // Determinar si es M/D/YYYY o MM/DD/YYYY basado en el tamaño
+        let month, day;
+        
+        if (part1 > 12) {
+          // Es DD/MM/YYYY (día > 12, entonces el primer número es el día)
+          day = part1;
+          month = part2;
+        } else if (part2 > 12) {
+          // Es MM/DD/YYYY (mes > 12, entonces el segundo número es el día)
+          month = part1;
+          day = part2;
+        } else {
+          // Ambos podrían ser válidos, asumir MM/DD/YYYY (formato americano)
+          month = part1;
+          day = part2;
+        }
+        
+        console.log(`🔄 Formato detectado: mes=${month}, día=${day}, año=${year}`);
+        
+        // Validar rangos
+        if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900 || year > 2100) {
+          console.error(`❌ Fecha inválida: mes=${month}, día=${day}, año=${year}`);
+          return null;
+        }
+        
+        // Crear fecha (mes - 1 porque JS usa 0-11)
+        const date = new Date(year, month - 1, day);
+        
+        // Verificar que la fecha sea válida
+        if (isNaN(date.getTime())) {
+          console.error(`❌ Fecha imposible: ${dateString}`);
+          return null;
+        }
+        
+        // Retornar en formato YYYY-MM-DD
+        const isoDate = date.toISOString().split('T')[0];
+        console.log(`✅ Fecha convertida: "${dateString}" → "${isoDate}"`);
+        return isoDate;
+      }
+    }
+    
+    // Si ya está en formato YYYY-MM-DD, verificar que sea válida
     if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDateString)) {
-      date = new Date(cleanDateString);
-    }
-    // Formato MM/DD/YYYY (formato americano)
-    else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanDateString)) {
-      const parts = cleanDateString.split('/');
-      if (parts.length === 3) {
-        const month = parseInt(parts[0]) - 1; // Los meses en JS van de 0-11
-        const day = parseInt(parts[1]);
-        const year = parseInt(parts[2]);
-        
-        // Validar que la fecha sea válida
-        if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > 2100) {
-          console.warn(`Fecha inválida detectada: ${dateString}`);
-          return null;
-        }
-        
-        date = new Date(year, month, day);
-        
-        // Verificar que la fecha creada sea válida (maneja casos como 31/09)
-        if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-          console.warn(`Fecha inválida detectada: ${dateString}`);
-          return null;
-        }
-      } else {
-        return null;
+      const date = new Date(cleanDateString);
+      if (!isNaN(date.getTime())) {
+        console.log(`✅ Formato YYYY-MM-DD ya correcto: ${cleanDateString}`);
+        return cleanDateString;
       }
     }
-    // Formato DD/MM/YYYY (formato europeo)
-    else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanDateString)) {
-      const parts = cleanDateString.split('/');
-      if (parts.length === 3) {
-        const day = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1; // Los meses en JS van de 0-11
-        const year = parseInt(parts[2]);
-        
-        // Validar que la fecha sea válida
-        if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > 2100) {
-          console.warn(`Fecha inválida detectada: ${dateString}`);
-          return null;
-        }
-        
-        date = new Date(year, month, day);
-        
-        // Verificar que la fecha creada sea válida (maneja casos como 31/09)
-        if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-          console.warn(`Fecha inválida detectada: ${dateString}`);
-          return null;
-        }
-      } else {
-        return null;
-      }
-    }
-    // Formato M/D/YYYY (formato americano sin ceros)
-    else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanDateString)) {
-      const parts = cleanDateString.split('/');
-      if (parts.length === 3) {
-        const month = parseInt(parts[0]) - 1;
-        const day = parseInt(parts[1]);
-        const year = parseInt(parts[2]);
-        
-        if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > 2100) {
-          console.warn(`Fecha inválida detectada: ${dateString}`);
-          return null;
-        }
-        
-        date = new Date(year, month, day);
-        
-        if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-          console.warn(`Fecha inválida detectada: ${dateString}`);
-          return null;
-        }
-      } else {
-        return null;
-      }
-    }
-    // Otros formatos - intentar parsear directamente
-    else {
-      date = new Date(cleanDateString);
-    }
     
-    // Verificar que la fecha sea válida
-    if (isNaN(date.getTime())) {
-      console.warn(`No se pudo parsear la fecha: ${dateString}`);
-      return null;
-    }
+    console.error(`❌ Formato no reconocido: ${dateString}`);
+    return null;
     
-    // Verificar que la fecha esté en un rango razonable
-    const year = date.getFullYear();
-    if (year < 1900 || year > 2100) {
-      console.warn(`Año fuera de rango: ${year} para fecha: ${dateString}`);
-      return null;
-    }
-    
-    // Retornar en formato ISO
-    return date.toISOString().split('T')[0]; // Solo la parte de la fecha, sin la hora
   } catch (error) {
-    console.error(`Error procesando fecha: ${dateString}`, error);
+    console.error(`❌ Error procesando fecha: ${dateString}`, error);
     return null;
   }
 }
 
-// Función para normalizar formatos de hora
+// Función para normalizar formatos de hora - CONVERSIÓN OBLIGATORIA
 function normalizeTime(timeString: string): string | null {
-  if (!timeString || timeString.trim() === '') return null;
+  if (!timeString || timeString.trim() === '' || timeString.toUpperCase() === 'N/A') {
+    return null;
+  }
   
   try {
     const cleanTime = timeString.trim().toUpperCase();
+    console.log(`🔄 Normalizando hora: "${timeString}" → "${cleanTime}"`);
     
     // Formato HH:MM (24 horas) - ya está correcto
     if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
       const [hours, minutes] = cleanTime.split(':').map(Number);
       if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        const normalized = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        console.log(`✅ Formato 24h detectado: ${cleanTime} → ${normalized}`);
+        return normalized;
       }
     }
     
-    // Formato HH:MM AM/PM (12 horas)
+    // Formato HH:MM AM/PM (12 horas) - como "11:00 AM"
     if (/^\d{1,2}:\d{2}\s*(AM|PM)$/.test(cleanTime)) {
       const match = cleanTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
       if (match) {
@@ -436,17 +421,23 @@ function normalizeTime(timeString: string): string | null {
         const minutes = parseInt(match[2]);
         const period = match[3];
         
+        console.log(`🔄 Formato 12h detectado: ${hours}:${minutes} ${period}`);
+        
         if (minutes >= 0 && minutes <= 59) {
           if (period === 'AM') {
             if (hours === 12) hours = 0; // 12:xx AM = 00:xx
-            if (hours >= 1 && hours <= 11) {
-              return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            if (hours >= 0 && hours <= 11) {
+              const normalized = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+              console.log(`✅ AM convertido: ${timeString} → ${normalized}`);
+              return normalized;
             }
           } else if (period === 'PM') {
             if (hours === 12) hours = 12; // 12:xx PM = 12:xx
             if (hours >= 1 && hours <= 11) {
               hours += 12; // Convertir a 24 horas
-              return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+              const normalized = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+              console.log(`✅ PM convertido: ${timeString} → ${normalized}`);
+              return normalized;
             }
           }
         }
@@ -460,26 +451,35 @@ function normalizeTime(timeString: string): string | null {
         let hours = parseInt(match[1]);
         const period = match[2];
         
+        console.log(`🔄 Formato hora sin minutos detectado: ${hours} ${period}`);
+        
         if (period === 'AM') {
           if (hours === 12) hours = 0;
-          if (hours >= 1 && hours <= 11) {
-            return `${hours.toString().padStart(2, '0')}:00`;
+          if (hours >= 0 && hours <= 11) {
+            const normalized = `${hours.toString().padStart(2, '0')}:00`;
+            console.log(`✅ AM sin minutos convertido: ${timeString} → ${normalized}`);
+            return normalized;
           }
         } else if (period === 'PM') {
           if (hours === 12) hours = 12;
           if (hours >= 1 && hours <= 11) {
             hours += 12;
-            return `${hours.toString().padStart(2, '0')}:00`;
+            const normalized = `${hours.toString().padStart(2, '0')}:00`;
+            console.log(`✅ PM sin minutos convertido: ${timeString} → ${normalized}`);
+            return normalized;
           }
         }
       }
     }
     
-    console.warn(`Formato de hora no reconocido: ${timeString}`);
+    // Solo mostrar error si NO es un valor esperado como N/A
+    if (timeString.toUpperCase() !== 'N/A' && timeString.trim() !== '') {
+      console.error(`❌ Formato de hora no reconocido: ${timeString}`);
+    }
     return timeString; // Retornar el valor original si no se puede normalizar
     
   } catch (error) {
-    console.error(`Error procesando hora: ${timeString}`, error);
+    console.error(`❌ Error procesando hora: ${timeString}`, error);
     return timeString;
   }
 }
