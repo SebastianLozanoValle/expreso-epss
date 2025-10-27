@@ -148,6 +148,17 @@ export function transformCsvDataToInforms(
           }
           break
           
+        case 'hora_cita':
+        case 'hora_ultima_cita':
+          if (value && value !== '') {
+            // Normalizar formato de hora
+            const normalizedTime = normalizeTime(value)
+            transformedRow[fieldName] = normalizedTime
+          } else {
+            transformedRow[fieldName] = null
+          }
+          break
+          
         default:
           transformedRow[fieldName] = value || null
           break
@@ -293,71 +304,183 @@ function convertToISODate(dateString: string): string | null {
   if (!dateString || dateString.trim() === '') return null
   
   try {
+    // Limpiar la cadena de fecha
+    const cleanDateString = dateString.trim().replace(/[^\d\/\-]/g, '');
+    
     // Manejar diferentes formatos de fecha
     let date: Date
     
-    // Formato DD/MM/YYYY
-    if (dateString.includes('/')) {
-      const parts = dateString.split('/')
+    // Formato YYYY-MM-DD (ya está en formato correcto)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDateString)) {
+      date = new Date(cleanDateString);
+    }
+    // Formato MM/DD/YYYY (formato americano)
+    else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanDateString)) {
+      const parts = cleanDateString.split('/');
       if (parts.length === 3) {
-        const day = parseInt(parts[0])
-        const month = parseInt(parts[1]) - 1 // Los meses en JS van de 0-11
-        const year = parseInt(parts[2])
+        const month = parseInt(parts[0]) - 1; // Los meses en JS van de 0-11
+        const day = parseInt(parts[1]);
+        const year = parseInt(parts[2]);
         
         // Validar que la fecha sea válida
-        if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900) {
-          return null
+        if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > 2100) {
+          console.warn(`Fecha inválida detectada: ${dateString}`);
+          return null;
         }
         
-        date = new Date(year, month, day)
+        date = new Date(year, month, day);
         
         // Verificar que la fecha creada sea válida (maneja casos como 31/09)
         if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-          return null
+          console.warn(`Fecha inválida detectada: ${dateString}`);
+          return null;
         }
       } else {
-        return null
+        return null;
       }
     }
-    // Formato MM/DD/YYYY
-    else if (dateString.includes('/') && dateString.split('/')[0].length <= 2) {
-      const parts = dateString.split('/')
+    // Formato DD/MM/YYYY (formato europeo)
+    else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanDateString)) {
+      const parts = cleanDateString.split('/');
       if (parts.length === 3) {
-        const month = parseInt(parts[0]) - 1
-        const day = parseInt(parts[1])
-        const year = parseInt(parts[2])
+        const day = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1; // Los meses en JS van de 0-11
+        const year = parseInt(parts[2]);
         
-        if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900) {
-          return null
+        // Validar que la fecha sea válida
+        if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > 2100) {
+          console.warn(`Fecha inválida detectada: ${dateString}`);
+          return null;
         }
         
-        date = new Date(year, month, day)
+        date = new Date(year, month, day);
+        
+        // Verificar que la fecha creada sea válida (maneja casos como 31/09)
+        if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+          console.warn(`Fecha inválida detectada: ${dateString}`);
+          return null;
+        }
+      } else {
+        return null;
+      }
+    }
+    // Formato M/D/YYYY (formato americano sin ceros)
+    else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanDateString)) {
+      const parts = cleanDateString.split('/');
+      if (parts.length === 3) {
+        const month = parseInt(parts[0]) - 1;
+        const day = parseInt(parts[1]);
+        const year = parseInt(parts[2]);
+        
+        if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > 2100) {
+          console.warn(`Fecha inválida detectada: ${dateString}`);
+          return null;
+        }
+        
+        date = new Date(year, month, day);
         
         if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-          return null
+          console.warn(`Fecha inválida detectada: ${dateString}`);
+          return null;
         }
       } else {
-        return null
+        return null;
       }
     }
-    // Formato YYYY-MM-DD
-    else if (dateString.includes('-')) {
-      date = new Date(dateString)
-    }
-    // Otros formatos
+    // Otros formatos - intentar parsear directamente
     else {
-      date = new Date(dateString)
+      date = new Date(cleanDateString);
     }
     
     // Verificar que la fecha sea válida
     if (isNaN(date.getTime())) {
-      return null
+      console.warn(`No se pudo parsear la fecha: ${dateString}`);
+      return null;
+    }
+    
+    // Verificar que la fecha esté en un rango razonable
+    const year = date.getFullYear();
+    if (year < 1900 || year > 2100) {
+      console.warn(`Año fuera de rango: ${year} para fecha: ${dateString}`);
+      return null;
     }
     
     // Retornar en formato ISO
-    return date.toISOString()
+    return date.toISOString().split('T')[0]; // Solo la parte de la fecha, sin la hora
   } catch (error) {
-    return null
+    console.error(`Error procesando fecha: ${dateString}`, error);
+    return null;
+  }
+}
+
+// Función para normalizar formatos de hora
+function normalizeTime(timeString: string): string | null {
+  if (!timeString || timeString.trim() === '') return null;
+  
+  try {
+    const cleanTime = timeString.trim().toUpperCase();
+    
+    // Formato HH:MM (24 horas) - ya está correcto
+    if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
+      const [hours, minutes] = cleanTime.split(':').map(Number);
+      if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+    }
+    
+    // Formato HH:MM AM/PM (12 horas)
+    if (/^\d{1,2}:\d{2}\s*(AM|PM)$/.test(cleanTime)) {
+      const match = cleanTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        const period = match[3];
+        
+        if (minutes >= 0 && minutes <= 59) {
+          if (period === 'AM') {
+            if (hours === 12) hours = 0; // 12:xx AM = 00:xx
+            if (hours >= 1 && hours <= 11) {
+              return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+          } else if (period === 'PM') {
+            if (hours === 12) hours = 12; // 12:xx PM = 12:xx
+            if (hours >= 1 && hours <= 11) {
+              hours += 12; // Convertir a 24 horas
+              return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+          }
+        }
+      }
+    }
+    
+    // Formato HH AM/PM (sin minutos)
+    if (/^\d{1,2}\s*(AM|PM)$/.test(cleanTime)) {
+      const match = cleanTime.match(/^(\d{1,2})\s*(AM|PM)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const period = match[2];
+        
+        if (period === 'AM') {
+          if (hours === 12) hours = 0;
+          if (hours >= 1 && hours <= 11) {
+            return `${hours.toString().padStart(2, '0')}:00`;
+          }
+        } else if (period === 'PM') {
+          if (hours === 12) hours = 12;
+          if (hours >= 1 && hours <= 11) {
+            hours += 12;
+            return `${hours.toString().padStart(2, '0')}:00`;
+          }
+        }
+      }
+    }
+    
+    console.warn(`Formato de hora no reconocido: ${timeString}`);
+    return timeString; // Retornar el valor original si no se puede normalizar
+    
+  } catch (error) {
+    console.error(`Error procesando hora: ${timeString}`, error);
+    return timeString;
   }
 }
 

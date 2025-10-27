@@ -160,16 +160,25 @@ export async function POST(request: NextRequest) {
       
       if (data.fecha_llegada && data.fecha_salida) {
         try {
-          const fechaLlegada = new Date(data.fecha_llegada);
-          const fechaSalida = new Date(data.fecha_salida);
+          // Validar que las fechas no sean strings vacíos o inválidos
+          const fechaLlegadaStr = data.fecha_llegada.toString().trim();
+          const fechaSalidaStr = data.fecha_salida.toString().trim();
           
-          // Calcular diferencia en días
-          const diferenciaMs = fechaSalida.getTime() - fechaLlegada.getTime();
-          const diferenciaDias = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
-          
-          // Si la diferencia es válida y positiva, usarla; sino usar 1 noche
-          if (diferenciaDias > 0 && diferenciaDias <= 30) { // Máximo 30 días para evitar errores
-            cantidadNoches = diferenciaDias;
+          if (fechaLlegadaStr && fechaSalidaStr && fechaLlegadaStr !== 'null' && fechaSalidaStr !== 'null') {
+            const fechaLlegada = new Date(fechaLlegadaStr);
+            const fechaSalida = new Date(fechaSalidaStr);
+            
+            // Verificar que las fechas sean válidas
+            if (!isNaN(fechaLlegada.getTime()) && !isNaN(fechaSalida.getTime())) {
+              // Calcular diferencia en días
+              const diferenciaMs = fechaSalida.getTime() - fechaLlegada.getTime();
+              const diferenciaDias = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
+              
+              // Si la diferencia es válida y positiva, usarla; sino usar 1 noche
+              if (diferenciaDias > 0 && diferenciaDias <= 30) { // Máximo 30 días para evitar errores
+                cantidadNoches = diferenciaDias;
+              }
+            }
           }
         } catch (error) {
           console.log('Error calculando fechas, usando 1 noche por defecto:', error);
@@ -195,15 +204,23 @@ export async function POST(request: NextRequest) {
     
     // Formatear fechas para mostrar en el PDF
     const formatDateForDisplay = (dateStr: string) => {
-      if (!dateStr) return 'N/A';
+      if (!dateStr || dateStr.trim() === '' || dateStr === 'null' || dateStr === 'undefined') return 'N/A';
       try {
-        const date = new Date(dateStr);
+        const dateStrClean = dateStr.toString().trim();
+        const date = new Date(dateStrClean);
+        
+        // Verificar que la fecha sea válida
+        if (isNaN(date.getTime())) {
+          return 'N/A';
+        }
+        
         return date.toLocaleDateString('es-ES', {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric'
         });
       } catch (error) {
+        console.log('Error formateando fecha:', error, 'Fecha original:', dateStr);
         return 'N/A';
       }
     };
