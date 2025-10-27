@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     
     // Detalles de la reserva
     let yPosition = 170;
-    const lineHeight = 10;
+    const lineHeight = 6; // Reducir espaciado entre líneas
     
     // Huésped con información adicional
     pdf.text('Huésped(es):', 20, yPosition);
@@ -138,6 +138,12 @@ export async function POST(request: NextRequest) {
     if (data.acompañante) {
       pdf.text(`Acompañante: ${data.acompañante}`, 120, yPosition);
       yPosition += lineHeight;
+      
+      // Número de documento del acompañante si existe
+      if (data.documento_acompañante) {
+        pdf.text(`Doc: ${data.documento_acompañante}`, 120, yPosition);
+        yPosition += lineHeight;
+      }
     }
     
     // Calcular cantidad de inquilinos reales (usuario + acompañante si existe)

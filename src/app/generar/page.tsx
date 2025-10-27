@@ -115,7 +115,8 @@ function GenerarPDFContent() {
         cantidad_habitaciones: dataToUse.cantidad_servicios_autorizados?.toString() || '1',
         telefono: dataToUse.numero_contacto?.toString() || '',
         observaciones: dataToUse.observaciones || '',
-        acompañante: dataToUse.apellidos_y_nombres_acompañante || '' // Incluir acompañante
+        acompañante: dataToUse.apellidos_y_nombres_acompañante || '', // Incluir acompañante
+        documento_acompañante: dataToUse.numero_documento_acompañante || '' // Incluir documento del acompañante
       };
 
       // Llamar a la API para generar el PDF
