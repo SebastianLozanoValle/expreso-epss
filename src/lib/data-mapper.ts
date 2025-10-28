@@ -36,7 +36,7 @@ export const COLUMN_MAPPING = {
 export function transformCsvDataToInforms(
   csvData: string[][], 
   headers: string[],
-  userId?: string
+  userEmail?: string
 ): TablesInsert<'informs'>[] {
   const transformedData: TablesInsert<'informs'>[] = []
   
@@ -92,8 +92,8 @@ export function transformCsvDataToInforms(
   // Procesar cada fila de datos
   csvData.forEach((row, rowIndex) => {
     const transformedRow: Record<string, any> = {
-      // Campo obligatorio: user_id del usuario logueado
-      user_id: userId || null,
+      // Campo obligatorio: creado_por con email del usuario logueado
+      creado_por: userEmail || null,
     }
     
     // Mapear cada campo

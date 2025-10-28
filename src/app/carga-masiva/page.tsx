@@ -223,7 +223,7 @@ export default function CargaMasivaPage() {
       
       // Transformar datos
       addLog('Transformando datos al formato de la base de datos...');
-      const transformed = transformCsvDataToInforms(dataRows, headers, user?.id);
+      const transformed = transformCsvDataToInforms(dataRows, headers, user?.email);
       setTransformedData(transformed);
       addLog(`Datos transformados: ${transformed.length} registros`);
       
@@ -278,7 +278,7 @@ export default function CargaMasivaPage() {
       // Usar datos transformados si existen, sino usar datos originales con conversión de fechas/horas
       const dataToUpload = transformedData.length > 0 ? transformedData : fileData.map(row => {
         const rowData: {[key: string]: string | number | boolean | null} = {
-          user_id: user?.id || '',
+          creado_por: user?.email || '',
         };
         
         // Mapeo por posición (basado en tu CSV)

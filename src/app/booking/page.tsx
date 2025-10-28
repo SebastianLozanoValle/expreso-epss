@@ -230,8 +230,8 @@ function BookingPageContent() {
         
         // Crear objeto con solo los campos que tienen valor
         const insertData: TablesInsert<'informs'> = {
-          // Campo obligatorio: user_id del usuario logueado
-          user_id: user?.id,
+          // Campo obligatorio: creado_por con email del usuario logueado
+          creado_por: user?.email || '',
           
           // Campos obligatorios
           tipo_documento_paciente: String(roomData.tipo_documento_paciente || ''),

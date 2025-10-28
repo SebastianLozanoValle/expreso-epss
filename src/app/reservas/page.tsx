@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { useUserEmail } from '@/hooks/useUserEmail';
 import { supabase } from '@/lib/supabase';
 import { Tables } from '@/types/supabase';
 import toast, { Toaster } from 'react-hot-toast';
@@ -25,6 +26,7 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedReserva, setEditedReserva] = useState<Reserva | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const { userEmail, loading: loadingEmail } = useUserEmail(reserva?.creado_por || null);
 
   // Inicializar datos editables cuando se abre el modal
   useEffect(() => {
@@ -430,6 +432,17 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
                 ) : (
                   <p className="mt-1 text-sm text-gray-900">{reserva.hora_cita || 'N/A'}</p>
                 )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Creado por</label>
+                <p className="mt-1 text-sm text-gray-900">
+                  {loadingEmail ? (
+                    <span className="text-gray-500">Cargando...</span>
+                  ) : (
+                    userEmail || reserva.creado_por || 'N/A'
+                  )}
+                </p>
               </div>
             </div>
           </div>

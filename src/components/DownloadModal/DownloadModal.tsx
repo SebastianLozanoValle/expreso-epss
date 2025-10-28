@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { saveAs } from 'file-saver';
 import { Tables } from '@/types/supabase';
+import { useUserEmail } from '@/hooks/useUserEmail';
 
 interface Reserva extends Omit<Tables<'informs'>, 'fecha_creacion'> {
   fecha_creacion?: string;
@@ -20,6 +21,7 @@ interface DownloadModalProps {
 export default function DownloadModal({ reserva, isOpen, onClose }: DownloadModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const { userEmail, loading: loadingEmail } = useUserEmail(reserva?.creado_por || null);
 
   if (!isOpen || !reserva) return null;
 
@@ -154,6 +156,16 @@ export default function DownloadModal({ reserva, isOpen, onClose }: DownloadModa
                 <strong className="text-gray-900">Acompañante:</strong> {reserva.apellidos_y_nombres_acompañante}
               </p>
             )}
+            <p className="text-sm text-gray-700">
+              <strong className="text-gray-900">Creado por Usuario:</strong> 
+              {loadingEmail ? (
+                <span className="text-gray-500 ml-1">Cargando...</span>
+              ) : userEmail ? (
+                <span className="font-mono ml-1">{userEmail}</span>
+              ) : (
+                <span className="text-gray-500 ml-1">Email no disponible</span>
+              )}
+            </p>
           </div>
 
           {/* Botón de descarga */}

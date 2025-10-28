@@ -22,6 +22,7 @@ export type Database = {
           borrado_por: string | null
           cantidad_servicios_autorizados: string | null
           correo: string | null
+          creado_por: string | null
           descripcion_servicio: string | null
           destino: string | null
           edad_paciente: string | null
@@ -46,7 +47,6 @@ export type Database = {
           requiere_acompañante: boolean | null
           tipo_documento_acompañante: string | null
           tipo_documento_paciente: string | null
-          user_id: string | null
         }
         Insert: {
           activa?: boolean
@@ -55,6 +55,7 @@ export type Database = {
           borrado_por?: string | null
           cantidad_servicios_autorizados?: string | null
           correo?: string | null
+          creado_por?: string | null
           descripcion_servicio?: string | null
           destino?: string | null
           edad_paciente?: string | null
@@ -79,7 +80,6 @@ export type Database = {
           requiere_acompañante?: boolean | null
           tipo_documento_acompañante?: string | null
           tipo_documento_paciente?: string | null
-          user_id?: string | null
         }
         Update: {
           activa?: boolean
@@ -88,6 +88,7 @@ export type Database = {
           borrado_por?: string | null
           cantidad_servicios_autorizados?: string | null
           correo?: string | null
+          creado_por?: string | null
           descripcion_servicio?: string | null
           destino?: string | null
           edad_paciente?: string | null
@@ -112,7 +113,6 @@ export type Database = {
           requiere_acompañante?: boolean | null
           tipo_documento_acompañante?: string | null
           tipo_documento_paciente?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
