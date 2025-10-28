@@ -119,21 +119,18 @@ export async function POST(request: NextRequest) {
     pdf.text('Apreciados Señores,', 20, 140);
     pdf.text('Confirmamos Reserva de la siguiente manera:', 20, 150);
     
-    // Parsear descripcion_servicio para separar tipo de habitación y observaciones
+    // Parsear descripcion_servicio para separar tipo de habitación y descripción del servicio
     let tipoHabitacion = 'Habitación Estándar';
-    let observacionesReales = data.observaciones || '';
-    let incluyeValue = ''; // Incluye = descripcion_servicio (exactamente igual)
+    let descripcionServicio = data.descripcion_servicio || '';
     
     if (data.descripcion_servicio && data.descripcion_servicio.includes(' / ')) {
       const partes = data.descripcion_servicio.split(' / ');
       tipoHabitacion = partes[0] || 'Habitación Estándar';
-      observacionesReales = partes[1] || observacionesReales;
-      incluyeValue = partes[1] || ''; // Incluye = parte después del /
-    } else {
-      // Si no hay /, incluyeValue = descripcion_servicio completo
-      observacionesReales = data.descripcion_servicio || '';
-      incluyeValue = data.descripcion_servicio || ''; // Incluye = descripcion_servicio completo
+      descripcionServicio = partes[1] || data.descripcion_servicio;
     }
+    
+    // Observaciones reales del campo observaciones de la base de datos
+    const observacionesReales = data.observaciones || '';
 
     // Función para dividir texto en líneas
     const splitTextIntoLines = (text: string, maxWidth: number) => {
@@ -273,9 +270,9 @@ export async function POST(request: NextRequest) {
       { label: 'Tarifa Antes de Impuestos:', value: tarifaTotal > 0 ? `$${tarifaTotal.toLocaleString('es-CO')}` : '$0' },
       { label: 'Cantidad de Habitaciones:', value: '1' },
       { label: 'Adultos:', value: cantidadInquilinos.toString() },
-      { label: 'Incluye:', value: incluyeValue },
+      { label: 'Incluye:', value: descripcionServicio },
       { label: 'Confirmado Por:', value: 'Sistema de Reservas' },
-      { label: 'Forma de Pago:', value: 'EPS' }
+      { label: 'Forma de Pago:', value: 'Facturar a agencia' }
     ];
     
     details.forEach(detail => {
