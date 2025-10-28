@@ -167,8 +167,8 @@ export async function POST(request: NextRequest) {
     yPosition += lineHeight;
     
     // Número de contacto del huésped
-    if (data.telefono_paciente) {
-      pdf.text(`Número de contacto huésped: ${data.telefono_paciente}`, 120, yPosition);
+    if (data.numero_contacto) {
+      pdf.text(`Número de contacto huésped: ${data.numero_contacto}`, 120, yPosition);
       yPosition += lineHeight;
     }
     
