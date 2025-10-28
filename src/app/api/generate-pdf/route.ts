@@ -166,15 +166,16 @@ export async function POST(request: NextRequest) {
     pdf.text((data.nombre_paciente || 'N/A').toUpperCase(), 120, yPosition);
     yPosition += lineHeight;
     
-    // Número de contacto del huésped
-    if (data.numero_contacto) {
-      pdf.text(`Número de contacto huésped: ${data.numero_contacto}`, 120, yPosition);
-      yPosition += lineHeight;
-    }
-    
     // Número de documento del paciente
     if (data.documento_paciente) {
       pdf.text(`Doc: ${data.documento_paciente}`, 120, yPosition);
+      yPosition += lineHeight;
+    }
+    
+    // Número de contacto del huésped
+    if (data.telefono) {
+      pdf.text('Número de contacto huésped:', 20, yPosition);
+      pdf.text(data.telefono, 120, yPosition);
       yPosition += lineHeight;
     }
     
