@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     
     pdf.text(direccion, 60, 80);
     pdf.text('Teléfono(s):', 20, 90);
-    pdf.text(data.telefono || 'N/A', 60, 90);
+    pdf.text('3243396016', 60, 90);
     pdf.text('Fax:', 20, 100);
     pdf.text('COLOMBIA', 20, 110);
     pdf.text('reservas@hebrara.com', 20, 120);
@@ -165,6 +165,12 @@ export async function POST(request: NextRequest) {
     pdf.text('Huésped(es):', 20, yPosition);
     pdf.text((data.nombre_paciente || 'N/A').toUpperCase(), 120, yPosition);
     yPosition += lineHeight;
+    
+    // Número de contacto del huésped
+    if (data.telefono_paciente) {
+      pdf.text(`Número de contacto huésped: ${data.telefono_paciente}`, 120, yPosition);
+      yPosition += lineHeight;
+    }
     
     // Número de documento del paciente
     if (data.documento_paciente) {
