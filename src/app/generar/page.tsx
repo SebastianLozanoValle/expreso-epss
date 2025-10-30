@@ -4,13 +4,11 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { saveAs } from 'file-saver';
 import { supabase } from '@/lib/supabase';
-import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 // Removed server-side dependencies
 
 // NO MÁS DATOS DE EJEMPLO - SOLO DATOS REALES DE LA BASE DE DATOS
 
 function GenerarPDFContent() {
-  const { user, loading, isAuthenticated } = useAuthRedirect();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [patientData, setPatientData] = useState<any>(null);
@@ -238,31 +236,6 @@ function GenerarPDFContent() {
 }
 
 export default function GenerarPDF() {
-  const { user, loading, isAuthenticated } = useAuthRedirect();
-
-  // Mostrar loading mientras se verifica la autenticación
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando autenticación...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Acceso requerido</h1>
-          <p className="text-gray-600">Debes iniciar sesión para generar PDFs.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
