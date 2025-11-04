@@ -83,10 +83,11 @@ export async function POST(request: NextRequest) {
     pdf.text(`Solicitud y/o Voucher #: ${data.numero_autorizacion || 'N/A'}`, 20, 50);
     pdf.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 150, 50);
     
-    // Información del hotel - reduciendo espaciado entre líneas (de 10 a 7 unidades)
-    pdf.text('Señores HOTEL', 20, 70);
-    pdf.text(data.hotel || 'Hotel por asignar', 60, 70);
-    pdf.text('Dirección:', 20, 77);
+    // Información del hotel - espaciado mínimo entre líneas, equidistante del voucher y saludo
+    const hotelStartY = 65; // 15 unidades después del voucher (Y: 50)
+    pdf.text('Señores HOTEL', 20, hotelStartY);
+    pdf.text(data.hotel || 'Hotel por asignar', 60, hotelStartY);
+    pdf.text('Dirección:', 20, hotelStartY + 5);
     
     // Asignar dirección automáticamente según el hotel
     let direccion = '';
@@ -108,16 +109,17 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    pdf.text(direccion, 60, 77);
-    pdf.text('Teléfono(s):', 20, 84);
-    pdf.text('3243396016', 60, 84);
-    pdf.text('Fax:', 20, 91);
-    pdf.text('COLOMBIA', 20, 98);
-    pdf.text('reservas@hebrara.com', 20, 105);
+    pdf.text(direccion, 60, hotelStartY + 5);
+    pdf.text('Teléfono(s):', 20, hotelStartY + 10);
+    pdf.text('3243396016', 60, hotelStartY + 10);
+    pdf.text('Fax:', 20, hotelStartY + 15);
+    pdf.text('COLOMBIA', 20, hotelStartY + 20);
+    pdf.text('reservas@hebrara.com', 20, hotelStartY + 25);
     
-    // Saludo - reduciendo espaciado entre líneas
-    pdf.text('Apreciados Señores,', 20, 115);
-    pdf.text('Confirmamos Reserva de la siguiente manera:', 20, 122);
+    // Saludo - espaciado mínimo entre líneas (5 unidades), equidistante del hotel
+    const saludoStartY = 105; // 15 unidades después del final del hotel (Y: 90)
+    pdf.text('Apreciados Señores,', 20, saludoStartY);
+    pdf.text('Confirmamos Reserva de la siguiente manera:', 20, saludoStartY + 5);
     
     // Parsear descripcion_servicio para separar tipo de habitación y descripción del servicio
     let tipoHabitacion = 'Habitación Estándar';
@@ -158,46 +160,85 @@ export async function POST(request: NextRequest) {
     };
 
     // Detalles de la reserva
-    let yPosition = 132;
-    const lineHeight = 6; // Reducir espaciado entre líneas
+    let yPosition = 117; // Ajustado después del saludo (Y: 110 + 7 unidades)
+    const lineHeight = 5; // Reducir espaciado entre líneas
     
-    // Huésped con información adicional
-    pdf.text('Huésped(es):', 20, yPosition);
-    pdf.text((data.nombre_paciente || 'N/A').toUpperCase(), 120, yPosition);
-    yPosition += lineHeight;
+    // Preparar datos del usuario para la tabla
+    const userInfo: Array<{ label: string; value: string }> = [];
+    userInfo.push({ label: 'Huésped(es):', value: (data.nombre_paciente || 'N/A').toUpperCase() });
     
-    // Número de documento del paciente
     if (data.documento_paciente) {
-      pdf.text('Doc:', 20, yPosition);
-      pdf.text(data.documento_paciente, 120, yPosition);
-      yPosition += lineHeight;
+      userInfo.push({ label: 'Doc:', value: data.documento_paciente });
     }
     
-    // Número de contacto del huésped
     if (data.telefono) {
-      pdf.text('Número de contacto huésped:', 20, yPosition);
-      pdf.text(data.telefono, 120, yPosition);
-      yPosition += lineHeight;
+      userInfo.push({ label: 'Número de contacto huésped:', value: data.telefono });
     }
     
-    // Cliente
-    pdf.text('Cliente:', 20, yPosition);
-    pdf.text('Sura', 120, yPosition);
-    yPosition += lineHeight;
-    
-    // Acompañante si existe
     if (data.acompañante) {
-      pdf.text('Acompañante:', 20, yPosition);
-      pdf.text(data.acompañante.toUpperCase(), 120, yPosition);
-      yPosition += lineHeight;
+      userInfo.push({ label: 'Acompañante:', value: data.acompañante.toUpperCase() });
       
-      // Número de documento del acompañante si existe
       if (data.documento_acompañante) {
-        pdf.text('Doc:', 20, yPosition);
-        pdf.text(data.documento_acompañante, 120, yPosition);
-        yPosition += lineHeight;
+        userInfo.push({ label: 'Doc:', value: data.documento_acompañante });
       }
     }
+    
+    // Dibujar tabla de información del usuario
+    const userTableX = 18;
+    const userTableWidth = 175;
+    const userTableY = yPosition - 1;
+    const userRowHeight = 6;
+    const userPadding = 2;
+    const userLabelX = userTableX + 4;
+    const userValueX = userLabelX + 95;
+    const userRadius = 3;
+    
+    const userTableHeight = userInfo.length * userRowHeight + userPadding * 2;
+    
+    // Dibujar fondo de la tabla de usuario
+    pdf.setFillColor(250, 250, 250);
+    if (typeof (pdf as any).roundedRect === 'function') {
+      (pdf as any).roundedRect(userTableX, userTableY, userTableWidth, userTableHeight, userRadius, userRadius, 'F');
+    } else {
+      pdf.rect(userTableX, userTableY, userTableWidth, userTableHeight, 'F');
+    }
+    
+    // Dibujar borde de la tabla de usuario
+    pdf.setDrawColor(180, 180, 180);
+    pdf.setLineWidth(0.5);
+    if (typeof (pdf as any).roundedRect === 'function') {
+      (pdf as any).roundedRect(userTableX, userTableY, userTableWidth, userTableHeight, userRadius, userRadius, 'S');
+    } else {
+      pdf.rect(userTableX, userTableY, userTableWidth, userTableHeight, 'S');
+    }
+    
+    // Dibujar filas de la tabla de usuario
+    let currentUserY = userTableY + userPadding;
+    
+    userInfo.forEach((info, index) => {
+      // Dibujar línea separadora entre filas (excepto la última)
+      if (index < userInfo.length - 1) {
+        pdf.setDrawColor(220, 220, 220);
+        pdf.setLineWidth(0.3);
+        pdf.line(userTableX + 2, currentUserY + userRowHeight - 1, userTableX + userTableWidth - 2, currentUserY + userRowHeight - 1);
+      }
+      
+      // Escribir etiqueta
+      pdf.setFontSize(10);
+      pdf.setTextColor(80, 80, 80);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(info.label, userLabelX, currentUserY + 4);
+      
+      // Escribir valor
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(info.value, userValueX, currentUserY + 4);
+      
+      currentUserY += userRowHeight;
+    });
+    
+    // Actualizar posición Y después de la tabla de usuario
+    yPosition = userTableY + userTableHeight + 4;
     
     // Calcular cantidad de inquilinos reales (usuario + acompañante si existe)
     let cantidadInquilinos = 1; // Siempre hay al menos el usuario principal
@@ -278,7 +319,39 @@ export async function POST(request: NextRequest) {
       }
     };
     
+    // Función para dibujar rectángulo redondeado
+    const drawRoundedRect = (x: number, y: number, width: number, height: number, radius: number) => {
+      // Esquinas redondeadas usando curvas
+      pdf.setLineWidth(0.5);
+      pdf.setDrawColor(200, 200, 200); // Color gris claro para los bordes
+      
+      // Dibujar rectángulo con bordes redondeados
+      // Top-left corner
+      pdf.line(x + radius, y, x + width - radius, y);
+      // pdf.ellipse(x + radius, y + radius, radius, radius, 0, 90, 180, 'S'); // Comentado - formato no compatible
+      
+      // Top-right corner
+      pdf.line(x + width, y + radius, x + width, y + height - radius);
+      // pdf.ellipse(x + width - radius, y + radius, radius, radius, 0, 0, 90, 'S'); // Comentado - formato no compatible
+      
+      // Bottom-right corner
+      pdf.line(x + width - radius, y + height, x + radius, y + height);
+      // pdf.ellipse(x + width - radius, y + height - radius, radius, radius, 0, 270, 360, 'S'); // Comentado - formato no compatible
+      
+      // Bottom-left corner
+      pdf.line(x, y + height - radius, x, y + radius);
+      // pdf.ellipse(x + radius, y + height - radius, radius, radius, 0, 180, 270, 'S'); // Comentado - formato no compatible
+      
+      // Líneas rectas
+      pdf.line(x + radius, y, x + width - radius, y); // Top
+      pdf.line(x + width, y + radius, x + width, y + height - radius); // Right
+      pdf.line(x + width - radius, y + height, x + radius, y + height); // Bottom
+      pdf.line(x, y + height - radius, x, y + radius); // Left
+    };
+    
+    // Preparar datos para la tabla
     const details = [
+      { label: 'Cliente:', value: 'Sura' },
       { label: 'Fecha de Llegada:', value: formatDateForDisplay(data.fecha_llegada) },
       { label: 'Fecha de Salida:', value: formatDateForDisplay(data.fecha_salida) },
       { label: 'Tipo de Habitación:', value: tipoHabitacion },
@@ -290,59 +363,184 @@ export async function POST(request: NextRequest) {
       { label: 'Forma de Pago:', value: 'Facturar a agencia' }
     ];
     
+    // Configuración de la tabla
+    const tableX = 18;
+    const tableWidth = 175;
+    const tableY = yPosition - 1;
+    const rowHeight = 6;
+    const padding = 2;
+    const labelX = tableX + 4;
+    const valueX = labelX + 95;
+    const radius = 3;
+    
+    // Calcular altura de cada fila y altura total
+    const rowHeights: number[] = [];
     details.forEach(detail => {
-      pdf.text(detail.label, 20, yPosition);
+      if (detail.label === 'Incluye:' && detail.value && detail.value.trim()) {
+        const observacionesLines = splitTextIntoLines(detail.value, 60);
+        rowHeights.push(Math.max(rowHeight, observacionesLines.length * lineHeight + 1));
+      } else {
+        rowHeights.push(rowHeight);
+      }
+    });
+    
+    const tableHeight = rowHeights.reduce((sum, height) => sum + height, 0) + padding * 2;
+    
+    // Dibujar fondo de la tabla con bordes redondeados
+    pdf.setFillColor(250, 250, 250); // Color de fondo gris muy claro
+    if (typeof (pdf as any).roundedRect === 'function') {
+      (pdf as any).roundedRect(tableX, tableY, tableWidth, tableHeight, radius, radius, 'F');
+    } else {
+      // Fallback si roundedRect no está disponible
+      pdf.rect(tableX, tableY, tableWidth, tableHeight, 'F');
+    }
+    
+    // Dibujar borde de la tabla con bordes redondeados
+    pdf.setDrawColor(180, 180, 180);
+    pdf.setLineWidth(0.5);
+    if (typeof (pdf as any).roundedRect === 'function') {
+      (pdf as any).roundedRect(tableX, tableY, tableWidth, tableHeight, radius, radius, 'S');
+    } else {
+      // Fallback si roundedRect no está disponible
+      pdf.rect(tableX, tableY, tableWidth, tableHeight, 'S');
+    }
+    
+    // Dibujar filas de la tabla
+    let currentY = tableY + padding;
+    
+    details.forEach((detail, index) => {
+      const currentRowHeight = rowHeights[index];
+      
+      // Dibujar línea separadora entre filas (excepto la última)
+      if (index < details.length - 1) {
+        pdf.setDrawColor(220, 220, 220);
+        pdf.setLineWidth(0.3);
+        pdf.line(tableX + 2, currentY + currentRowHeight - 1, tableX + tableWidth - 2, currentY + currentRowHeight - 1);
+      }
+      
+      // Escribir etiqueta
+      pdf.setFontSize(10);
+      pdf.setTextColor(80, 80, 80);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(detail.label, labelX, currentY + 4);
+      
+      // Escribir valor
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(0, 0, 0);
+      
       if (detail.label === 'Incluye:') {
         // Aplicar salto de línea automático para "Incluye"
         if (detail.value && detail.value.trim()) {
           const observacionesLines = splitTextIntoLines(detail.value, 60);
-          observacionesLines.forEach((line, index) => {
-            pdf.text(line, 120, yPosition);
-            yPosition += lineHeight;
+          observacionesLines.forEach((line, lineIndex) => {
+            pdf.text(line, valueX, currentY + 4 + (lineIndex * lineHeight));
           });
-        } else {
-          // Si está vacío, mostrar vacío pero mantener el espacio
-          pdf.text('', 120, yPosition);
-          yPosition += lineHeight;
         }
       } else {
-        pdf.text(detail.value, 120, yPosition);
-        yPosition += lineHeight;
+        pdf.text(detail.value, valueX, currentY + 4);
       }
+      
+      currentY += currentRowHeight;
     });
     
-    // Salto de línea adicional después de detalles
-    yPosition += lineHeight;
+    // Actualizar posición Y después de la tabla
+    yPosition = tableY + tableHeight + 4;
     
-    // Observaciones con salto de línea automático
-    pdf.text('Observaciones:', 20, yPosition);
-    
-    // Texto por defecto de observaciones
+    // Preparar datos de observaciones para la tabla
     const textoPorDefecto = 'Traslado aeropuerto o terminal - hotel (ida y regreso), Alojamiento en hotel por noche, Tres alimentaciones por día y Un traslado interno redondo (usuario y acompañantes)';
     
-    // Dividir texto por defecto en líneas
-    const textoDefectoLines = splitTextIntoLines(textoPorDefecto, 60);
-    textoDefectoLines.forEach((line, index) => {
-      pdf.text(line, 120, yPosition);
-      yPosition += lineHeight;
+    const observacionesInfo: Array<{ label: string; value: string; multiline?: boolean }> = [];
+    observacionesInfo.push({ 
+      label: 'Observaciones:', 
+      value: textoPorDefecto,
+      multiline: true
     });
     
-    // Si hay observaciones adicionales del usuario, agregarlas
     if (observacionesReales && observacionesReales.trim() !== '') {
-      // Añadir "Otras observaciones:" antes de las observaciones del usuario
-      pdf.text('Otras observaciones:', 20, yPosition);
-      yPosition += lineHeight;
-      
-      // Dividir observaciones del usuario en líneas
-      const observacionesLines = splitTextIntoLines(observacionesReales, 60);
-      observacionesLines.forEach((line, index) => {
-        pdf.text(line, 120, yPosition);
-        yPosition += lineHeight;
+      observacionesInfo.push({ 
+        label: 'Otras observaciones:', 
+        value: observacionesReales,
+        multiline: true
       });
     }
     
-    // Salto de línea adicional después de observaciones
-    yPosition += lineHeight;
+    // Dibujar tabla de observaciones
+    const obsTableX = 18;
+    const obsTableWidth = 175;
+    const obsTableY = yPosition - 1;
+    const obsRowHeight = 6;
+    const obsPadding = 2;
+    const obsLabelX = obsTableX + 4;
+    const obsValueX = obsLabelX + 95;
+    const obsRadius = 3;
+    
+    // Calcular altura de cada fila de observaciones
+    const obsRowHeights: number[] = [];
+    observacionesInfo.forEach(obs => {
+      if (obs.multiline && obs.value) {
+        const obsLines = splitTextIntoLines(obs.value, 60);
+        obsRowHeights.push(Math.max(obsRowHeight, obsLines.length * lineHeight + 1));
+      } else {
+        obsRowHeights.push(obsRowHeight);
+      }
+    });
+    
+    const obsTableHeight = obsRowHeights.reduce((sum, height) => sum + height, 0) + obsPadding * 2;
+    
+    // Dibujar fondo de la tabla de observaciones
+    pdf.setFillColor(250, 250, 250);
+    if (typeof (pdf as any).roundedRect === 'function') {
+      (pdf as any).roundedRect(obsTableX, obsTableY, obsTableWidth, obsTableHeight, obsRadius, obsRadius, 'F');
+    } else {
+      pdf.rect(obsTableX, obsTableY, obsTableWidth, obsTableHeight, 'F');
+    }
+    
+    // Dibujar borde de la tabla de observaciones
+    pdf.setDrawColor(180, 180, 180);
+    pdf.setLineWidth(0.5);
+    if (typeof (pdf as any).roundedRect === 'function') {
+      (pdf as any).roundedRect(obsTableX, obsTableY, obsTableWidth, obsTableHeight, obsRadius, obsRadius, 'S');
+    } else {
+      pdf.rect(obsTableX, obsTableY, obsTableWidth, obsTableHeight, 'S');
+    }
+    
+    // Dibujar filas de la tabla de observaciones
+    let currentObsY = obsTableY + obsPadding;
+    
+    observacionesInfo.forEach((obs, index) => {
+      const currentObsRowHeight = obsRowHeights[index];
+      
+      // Dibujar línea separadora entre filas (excepto la última)
+      if (index < observacionesInfo.length - 1) {
+        pdf.setDrawColor(220, 220, 220);
+        pdf.setLineWidth(0.3);
+        pdf.line(obsTableX + 2, currentObsY + currentObsRowHeight - 1, obsTableX + obsTableWidth - 2, currentObsY + currentObsRowHeight - 1);
+      }
+      
+      // Escribir etiqueta
+      pdf.setFontSize(10);
+      pdf.setTextColor(80, 80, 80);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(obs.label, obsLabelX, currentObsY + 4);
+      
+      // Escribir valor
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(0, 0, 0);
+      
+      if (obs.multiline && obs.value) {
+        const obsLines = splitTextIntoLines(obs.value, 60);
+        obsLines.forEach((line, lineIndex) => {
+          pdf.text(line, obsValueX, currentObsY + 4 + (lineIndex * lineHeight));
+        });
+      } else {
+        pdf.text(obs.value, obsValueX, currentObsY + 4);
+      }
+      
+      currentObsY += currentObsRowHeight;
+    });
+    
+    // Actualizar posición Y después de la tabla de observaciones
+    yPosition = obsTableY + obsTableHeight + 4;
     
     // Generar el PDF
     const pdfBuffer = Buffer.from(pdf.output('arraybuffer'));
