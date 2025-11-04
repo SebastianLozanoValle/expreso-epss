@@ -83,10 +83,10 @@ export async function POST(request: NextRequest) {
     pdf.text(`Solicitud y/o Voucher #: ${data.numero_autorizacion || 'N/A'}`, 20, 50);
     pdf.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 150, 50);
     
-    // Información del hotel
+    // Información del hotel - reduciendo espaciado entre líneas (de 10 a 7 unidades)
     pdf.text('Señores HOTEL', 20, 70);
     pdf.text(data.hotel || 'Hotel por asignar', 60, 70);
-    pdf.text('Dirección:', 20, 80);
+    pdf.text('Dirección:', 20, 77);
     
     // Asignar dirección automáticamente según el hotel
     let direccion = '';
@@ -108,16 +108,16 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    pdf.text(direccion, 60, 80);
-    pdf.text('Teléfono(s):', 20, 90);
-    pdf.text('3243396016', 60, 90);
-    pdf.text('Fax:', 20, 100);
-    pdf.text('COLOMBIA', 20, 110);
-    pdf.text('reservas@hebrara.com', 20, 120);
+    pdf.text(direccion, 60, 77);
+    pdf.text('Teléfono(s):', 20, 84);
+    pdf.text('3243396016', 60, 84);
+    pdf.text('Fax:', 20, 91);
+    pdf.text('COLOMBIA', 20, 98);
+    pdf.text('reservas@hebrara.com', 20, 105);
     
-    // Saludo
-    pdf.text('Apreciados Señores,', 20, 140);
-    pdf.text('Confirmamos Reserva de la siguiente manera:', 20, 150);
+    // Saludo - reduciendo espaciado entre líneas
+    pdf.text('Apreciados Señores,', 20, 115);
+    pdf.text('Confirmamos Reserva de la siguiente manera:', 20, 122);
     
     // Parsear descripcion_servicio para separar tipo de habitación y descripción del servicio
     let tipoHabitacion = 'Habitación Estándar';
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Detalles de la reserva
-    let yPosition = 170;
+    let yPosition = 132;
     const lineHeight = 6; // Reducir espaciado entre líneas
     
     // Huésped con información adicional
@@ -168,7 +168,8 @@ export async function POST(request: NextRequest) {
     
     // Número de documento del paciente
     if (data.documento_paciente) {
-      pdf.text(`Doc: ${data.documento_paciente}`, 120, yPosition);
+      pdf.text('Doc:', 20, yPosition);
+      pdf.text(data.documento_paciente, 120, yPosition);
       yPosition += lineHeight;
     }
     
@@ -179,14 +180,21 @@ export async function POST(request: NextRequest) {
       yPosition += lineHeight;
     }
     
+    // Cliente
+    pdf.text('Cliente:', 20, yPosition);
+    pdf.text('Sura', 120, yPosition);
+    yPosition += lineHeight;
+    
     // Acompañante si existe
     if (data.acompañante) {
-      pdf.text(`Acompañante: ${data.acompañante.toUpperCase()}`, 120, yPosition);
+      pdf.text('Acompañante:', 20, yPosition);
+      pdf.text(data.acompañante.toUpperCase(), 120, yPosition);
       yPosition += lineHeight;
       
       // Número de documento del acompañante si existe
       if (data.documento_acompañante) {
-        pdf.text(`Doc: ${data.documento_acompañante}`, 120, yPosition);
+        pdf.text('Doc:', 20, yPosition);
+        pdf.text(data.documento_acompañante, 120, yPosition);
         yPosition += lineHeight;
       }
     }
@@ -308,16 +316,30 @@ export async function POST(request: NextRequest) {
     
     // Observaciones con salto de línea automático
     pdf.text('Observaciones:', 20, yPosition);
-    const observaciones = observacionesReales || 'N/A';
     
-    // Dividir observaciones en líneas
-    const observacionesLines = splitTextIntoLines(observaciones, 60); // 60 caracteres máximo por línea
+    // Texto por defecto de observaciones
+    const textoPorDefecto = 'Traslado aeropuerto o terminal - hotel (ida y regreso), Alojamiento en hotel por noche, Tres alimentaciones por día y Un traslado interno redondo (usuario y acompañantes)';
     
-    // Escribir cada línea de observaciones
-    observacionesLines.forEach((line, index) => {
+    // Dividir texto por defecto en líneas
+    const textoDefectoLines = splitTextIntoLines(textoPorDefecto, 60);
+    textoDefectoLines.forEach((line, index) => {
       pdf.text(line, 120, yPosition);
       yPosition += lineHeight;
     });
+    
+    // Si hay observaciones adicionales del usuario, agregarlas
+    if (observacionesReales && observacionesReales.trim() !== '') {
+      // Añadir "Otras observaciones:" antes de las observaciones del usuario
+      pdf.text('Otras observaciones:', 20, yPosition);
+      yPosition += lineHeight;
+      
+      // Dividir observaciones del usuario en líneas
+      const observacionesLines = splitTextIntoLines(observacionesReales, 60);
+      observacionesLines.forEach((line, index) => {
+        pdf.text(line, 120, yPosition);
+        yPosition += lineHeight;
+      });
+    }
     
     // Salto de línea adicional después de observaciones
     yPosition += lineHeight;
