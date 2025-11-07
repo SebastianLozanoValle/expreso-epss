@@ -1,12 +1,54 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useUserEmail } from '@/hooks/useUserEmail';
 import { supabase } from '@/lib/supabase';
 import { Tables } from '@/types/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 import DownloadModal from '@/components/DownloadModal/DownloadModal';
+
+// Función helper para mostrar fechas en la UI sin problemas de zona horaria
+// IMPORTANTE: Si en BD está 26, mostrar 25 en la UI (restar 1 día)
+const formatDateForDisplay = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'N/A';
+  try {
+    let date: Date;
+    
+    // Si está en formato YYYY-MM-DD (viene de la BD), parsearlo y RESTAR un día
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      date = new Date(year, month - 1, day);
+      // RESTAR un día porque en BD está guardada con un día más
+      date.setDate(date.getDate() - 1);
+    } else if (dateString.includes('T')) {
+      // Si viene en formato ISO, extraer la fecha y restar un día
+      const dateOnly = dateString.split('T')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+        const [year, month, day] = dateOnly.split('-').map(Number);
+        date = new Date(year, month - 1, day);
+        date.setDate(date.getDate() - 1);
+      } else {
+        date = new Date(dateString);
+      }
+    } else {
+      date = new Date(dateString);
+    }
+    
+    if (isNaN(date.getTime())) {
+      return 'N/A';
+    }
+    
+    // Formatear a DD/MM/YYYY
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.error('Error formateando fecha para display:', error, dateString);
+    return 'N/A';
+  }
+};
 
 interface Reserva extends Omit<Tables<'informs'>, 'fecha_creacion'> {
   fecha_creacion?: string;
@@ -19,26 +61,89 @@ interface ReservaModalProps {
   reserva: Reserva | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave?: (updatedReserva: Reserva) => void;
+  onSave?: (updatedReserva: Reserva) => Promise<Reserva | void>;
 }
 
 function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedReserva, setEditedReserva] = useState<Reserva | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const isEditingRef = useRef(false);
   const { userEmail, loading: loadingEmail } = useUserEmail(reserva?.creado_por || null);
 
-  // Inicializar datos editables cuando se abre el modal
+  // Función helper para formatear fechas al formato YYYY-MM-DD para inputs date
+  // IMPORTANTE: Si en BD está 26, mostrar 25 en el input (restar 1 día)
+  const formatDateForInput = (dateString: string | null | undefined): string => {
+    if (!dateString) return '';
+    try {
+      let date: Date;
+      
+      // Si está en formato YYYY-MM-DD (viene de la BD), parsearlo y RESTAR un día
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        date = new Date(year, month - 1, day);
+        // RESTAR un día porque en BD está guardada con un día más
+        date.setDate(date.getDate() - 1);
+      } else if (dateString.includes('T')) {
+        // Si viene en formato ISO, extraer la fecha y restar un día
+        const dateOnly = dateString.split('T')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+          const [year, month, day] = dateOnly.split('-').map(Number);
+          date = new Date(year, month - 1, day);
+          date.setDate(date.getDate() - 1);
+        } else {
+          date = new Date(dateString);
+        }
+      } else {
+        date = new Date(dateString);
+      }
+      
+      if (isNaN(date.getTime())) {
+        console.warn('Fecha inválida:', dateString);
+        return '';
+      }
+      
+      // Formatear a YYYY-MM-DD
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      console.error('Error formateando fecha:', error, dateString);
+      return '';
+    }
+  };
+
+  // Sincronizar isEditingRef con isEditing
+  useEffect(() => {
+    isEditingRef.current = isEditing;
+  }, [isEditing]);
+
+  // Inicializar datos editables cuando se abre el modal o cuando cambia la reserva
+  // IMPORTANTE: Solo actualizar cuando cambia reserva, NO cuando cambia isEditing
+  // para evitar sobrescribir cambios del usuario mientras edita
   useEffect(() => {
     if (reserva) {
-      console.log('Modal: Inicializando reserva:', reserva);
-      setEditedReserva({ ...reserva });
+      // Solo actualizar si NO estamos editando (usar ref para evitar problemas de timing)
+      if (!isEditingRef.current) {
+        console.log('Modal: Inicializando reserva desde prop:', reserva);
+        setEditedReserva({ ...reserva });
+      } else {
+        console.log('Modal: Ignorando actualización de reserva porque estamos editando');
+      }
     }
-  }, [reserva]);
+  }, [reserva]); // Solo dependencia de reserva, NO isEditing
 
   if (!isOpen || !reserva) return null;
 
+  // Usar editedReserva si está disponible, de lo contrario usar reserva
+  // Esto asegura que después de guardar, se muestren los datos actualizados
+  const displayReserva = editedReserva || reserva;
+
   const handleEdit = () => {
+    if (reserva) {
+      setEditedReserva({ ...reserva });
+    }
     setIsEditing(true);
   };
 
@@ -52,8 +157,18 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
     
     setIsSaving(true);
     try {
-      await onSave(editedReserva);
+      const updatedReserva = await onSave(editedReserva);
       setIsEditing(false);
+      
+      // IMPORTANTE: Actualizar el estado local con los datos devueltos
+      // Esto asegura que el modal muestre los datos actualizados inmediatamente
+      if (updatedReserva) {
+        console.log('✅ Datos actualizados recibidos:', updatedReserva);
+        setEditedReserva({ ...updatedReserva });
+        // Forzar actualización del prop reserva también
+        // Esto se hace actualizando selectedReserva en el componente padre
+      }
+      
       toast.success('Reserva actualizada exitosamente', {
         duration: 4000,
         style: {
@@ -67,6 +182,7 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
         icon: '✅',
       });
     } catch (error) {
+      console.error('Error en handleSave:', error);
       toast.error('Error al actualizar la reserva', {
         duration: 4000,
         style: {
@@ -86,6 +202,7 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
 
   const handleFieldChange = (field: keyof Reserva, value: string) => {
     if (!editedReserva) return;
+    console.log(`Cambiando ${field} de "${editedReserva[field]}" a "${value}"`);
     setEditedReserva({
       ...editedReserva,
       [field]: value
@@ -377,13 +494,13 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
                 {isEditing ? (
                   <input
                     type="date"
-                    value={editedReserva?.fecha_check_in || ''}
+                    value={formatDateForInput(editedReserva?.fecha_check_in)}
                     onChange={(e) => handleFieldChange('fecha_check_in', e.target.value)}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   />
                 ) : (
                   <p className="mt-1 text-sm text-gray-900">
-                    {reserva.fecha_check_in ? new Date(reserva.fecha_check_in).toLocaleDateString('es-ES') : 'N/A'}
+                    {formatDateForDisplay(displayReserva.fecha_check_in)}
                   </p>
                 )}
               </div>
@@ -393,13 +510,13 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
                 {isEditing ? (
                   <input
                     type="date"
-                    value={editedReserva?.fecha_check_out || ''}
+                    value={formatDateForInput(editedReserva?.fecha_check_out)}
                     onChange={(e) => handleFieldChange('fecha_check_out', e.target.value)}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   />
                 ) : (
                   <p className="mt-1 text-sm text-gray-900">
-                    {reserva.fecha_check_out ? new Date(reserva.fecha_check_out).toLocaleDateString('es-ES') : 'N/A'}
+                    {formatDateForDisplay(displayReserva.fecha_check_out)}
                   </p>
                 )}
               </div>
@@ -409,13 +526,13 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
                 {isEditing ? (
                   <input
                     type="date"
-                    value={editedReserva?.fecha_cita || ''}
+                    value={formatDateForInput(editedReserva?.fecha_cita)}
                     onChange={(e) => handleFieldChange('fecha_cita', e.target.value)}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   />
                 ) : (
                   <p className="mt-1 text-sm text-gray-900">
-                    {reserva.fecha_cita ? new Date(reserva.fecha_cita).toLocaleDateString('es-ES') : 'N/A'}
+                    {formatDateForDisplay(displayReserva.fecha_cita)}
                   </p>
                 )}
               </div>
@@ -682,41 +799,112 @@ function ReservasContent() {
   };
 
   // Guardar cambios en la reserva
-  const handleSaveReserva = async (updatedReserva: Reserva) => {
+  const handleSaveReserva = async (updatedReserva: Reserva): Promise<Reserva> => {
     try {
-      const { error } = await supabase
+      console.log('🔄 Iniciando actualización de reserva:', updatedReserva.numero_autorizacion);
+      console.log('📅 Fechas recibidas:', {
+        check_in: updatedReserva.fecha_check_in,
+        check_out: updatedReserva.fecha_check_out,
+        fecha_cita: updatedReserva.fecha_cita
+      });
+
+      // Formatear fechas a YYYY-MM-DD (sin hora) para mantener consistencia con otras fechas
+      // IMPORTANTE: Si el usuario pone 25, guardar 26 en BD (sumar 1 día)
+      const formatDateForDB = (dateString: string | null | undefined): string | null => {
+        if (!dateString) return null;
+        
+        // Si viene del input date, está en formato YYYY-MM-DD, SUMAR un día
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+          const [year, month, day] = dateString.split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          // SUMAR un día para guardar en BD
+          date.setDate(date.getDate() + 1);
+          
+          // Formatear a YYYY-MM-DD
+          const formattedYear = date.getFullYear();
+          const formattedMonth = String(date.getMonth() + 1).padStart(2, '0');
+          const formattedDay = String(date.getDate()).padStart(2, '0');
+          const formatted = `${formattedYear}-${formattedMonth}-${formattedDay}`;
+          
+          console.log(`📅 Guardando fecha en BD: "${dateString}" -> "${formatted}" (sumó 1 día)`);
+          return formatted;
+        }
+        
+        // Si ya está en formato ISO, extraer solo la fecha sin hora
+        if (dateString.includes('T')) {
+          return dateString.split('T')[0];
+        }
+        
+        // Si es otro formato, intentar parsearlo y devolver YYYY-MM-DD
+        try {
+          const date = new Date(dateString);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          }
+        } catch (error) {
+          console.error('Error parseando fecha:', dateString, error);
+        }
+        
+        return null;
+      };
+
+      const fechaCheckIn = formatDateForDB(updatedReserva.fecha_check_in);
+      const fechaCheckOut = formatDateForDB(updatedReserva.fecha_check_out);
+      const fechaCita = formatDateForDB(updatedReserva.fecha_cita);
+
+      const updateData = {
+        apellidos_y_nombres_paciente: updatedReserva.apellidos_y_nombres_paciente,
+        tipo_documento_paciente: updatedReserva.tipo_documento_paciente,
+        numero_documento_paciente: updatedReserva.numero_documento_paciente,
+        edad_paciente: updatedReserva.edad_paciente,
+        regimen: updatedReserva.regimen,
+        numero_contacto: updatedReserva.numero_contacto,
+        correo: updatedReserva.correo,
+        numero_autorizacion: updatedReserva.numero_autorizacion,
+        hotel_asignado: updatedReserva.hotel_asignado,
+        destino: updatedReserva.destino,
+        fecha_check_in: fechaCheckIn,
+        fecha_check_out: fechaCheckOut,
+        fecha_cita: fechaCita,
+        hora_cita: updatedReserva.hora_cita,
+        apellidos_y_nombres_acompañante: updatedReserva.apellidos_y_nombres_acompañante,
+        tipo_documento_acompañante: updatedReserva.tipo_documento_acompañante,
+        numero_documento_acompañante: updatedReserva.numero_documento_acompañante,
+        parentesco_acompañante: updatedReserva.parentesco_acompañante,
+        observaciones: updatedReserva.observaciones
+      };
+
+      console.log('💾 Datos a actualizar en DB:', updateData);
+
+      const { data, error } = await supabase
         .from('informs')
-        .update({
-          apellidos_y_nombres_paciente: updatedReserva.apellidos_y_nombres_paciente,
-          tipo_documento_paciente: updatedReserva.tipo_documento_paciente,
-          numero_documento_paciente: updatedReserva.numero_documento_paciente,
-          edad_paciente: updatedReserva.edad_paciente,
-          regimen: updatedReserva.regimen,
-          numero_contacto: updatedReserva.numero_contacto,
-          correo: updatedReserva.correo,
-          numero_autorizacion: updatedReserva.numero_autorizacion,
-          hotel_asignado: updatedReserva.hotel_asignado,
-          destino: updatedReserva.destino,
-          fecha_check_in: updatedReserva.fecha_check_in,
-          fecha_check_out: updatedReserva.fecha_check_out,
-          fecha_cita: updatedReserva.fecha_cita,
-          hora_cita: updatedReserva.hora_cita,
-          apellidos_y_nombres_acompañante: updatedReserva.apellidos_y_nombres_acompañante,
-          tipo_documento_acompañante: updatedReserva.tipo_documento_acompañante,
-          numero_documento_acompañante: updatedReserva.numero_documento_acompañante,
-          parentesco_acompañante: updatedReserva.parentesco_acompañante,
-          observaciones: updatedReserva.observaciones
-        })
-        .eq('numero_autorizacion', updatedReserva.numero_autorizacion);
+        .update(updateData)
+        .eq('numero_autorizacion', updatedReserva.numero_autorizacion)
+        .select()
+        .single();
 
       if (error) {
+        console.error('❌ Error en update de Supabase:', error);
         throw error;
       }
 
+      console.log('✅ Update exitoso. Datos actualizados:', data);
+
+      const updatedData = data as Reserva;
+
+      // Actualizar la reserva seleccionada con los datos actualizados de la base de datos
+      setSelectedReserva(updatedData);
+
       // Recargar la lista
       loadReservas(currentPage);
+
+      // Devolver los datos actualizados para que el modal los use
+      return updatedData;
     } catch (error) {
-      console.error('Error updating reserva:', error);
+      console.error('❌ Error updating reserva:', error);
       throw error;
     }
   };
@@ -925,8 +1113,8 @@ function ReservasContent() {
                           <div className="text-sm text-gray-900">
                             {reserva.fecha_check_in && reserva.fecha_check_out ? (
                               <>
-                                <div>{new Date(reserva.fecha_check_in).toLocaleDateString('es-ES')}</div>
-                                <div className="text-gray-500">→ {new Date(reserva.fecha_check_out).toLocaleDateString('es-ES')}</div>
+                                <div>{formatDateForDisplay(reserva.fecha_check_in)}</div>
+                                <div className="text-gray-500">→ {formatDateForDisplay(reserva.fecha_check_out)}</div>
                               </>
                             ) : (
                               'N/A'
