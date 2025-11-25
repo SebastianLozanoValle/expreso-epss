@@ -202,10 +202,17 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
 
   const handleFieldChange = (field: keyof Reserva, value: string) => {
     if (!editedReserva) return;
-    console.log(`Cambiando ${field} de "${editedReserva[field]}" a "${value}"`);
+    
+    // Eliminar espacios en blanco del número de autorización
+    let processedValue = value;
+    if (field === 'numero_autorizacion') {
+      processedValue = value.replace(/\s/g, '');
+    }
+    
+    console.log(`Cambiando ${field} de "${editedReserva[field]}" a "${processedValue}"`);
     setEditedReserva({
       ...editedReserva,
-      [field]: value
+      [field]: processedValue
     });
   };
 

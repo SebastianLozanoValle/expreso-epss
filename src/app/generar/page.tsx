@@ -16,7 +16,8 @@ function GenerarPDFContent() {
   const [retryCount, setRetryCount] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const searchParams = useSearchParams();
-  const numeroAutorizacion = searchParams.get('auth');
+  // Eliminar espacios en blanco del número de autorización de la URL
+  const numeroAutorizacion = searchParams.get('auth')?.replace(/\s/g, '') || null;
 
   // Cargar datos del paciente desde Supabase
   useEffect(() => {

@@ -174,6 +174,15 @@ export function transformCsvDataToInforms(
           }
           break
           
+        case 'numero_autorizacion':
+          // Eliminar espacios en blanco del número de autorización
+          if (value && value !== '') {
+            transformedRow[fieldName] = value.replace(/\s/g, '')
+          } else {
+            transformedRow[fieldName] = null
+          }
+          break
+          
         default:
           transformedRow[fieldName] = value || null
           break
