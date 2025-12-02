@@ -120,11 +120,17 @@ function BookingPageContent() {
   }
 
   const handleInputChange = (roomId: string, field: string, value: string | number | boolean) => {
+    // Eliminar espacios en blanco del número de autorización
+    let processedValue = value;
+    if (field === 'numero_autorizacion' && typeof value === 'string') {
+      processedValue = value.replace(/\s/g, '');
+    }
+    
     setFormData(prev => ({
       ...prev,
       [roomId]: {
         ...prev[roomId],
-        [field]: value
+        [field]: processedValue
       }
     }));
     

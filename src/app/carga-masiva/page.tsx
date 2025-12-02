@@ -305,7 +305,8 @@ export default function CargaMasivaPage() {
             hotelAsignado = 'Bulevar del Rio';
           }
           
-          rowData.numero_autorizacion = row[7] || null; // 298756457
+          // Eliminar espacios en blanco del número de autorización
+          rowData.numero_autorizacion = row[7] ? String(row[7]).replace(/\s/g, '') : null; // 298756457
           rowData.cantidad_servicios_autorizados = 1; // Siempre 1 habitación autorizada
           rowData.numero_contacto = row[9] ? parseInt(row[9]) : null; // 3105555555
           rowData.requiere_acompañante = row[10] === 'SI' || row[10] === 'S'; // NO
