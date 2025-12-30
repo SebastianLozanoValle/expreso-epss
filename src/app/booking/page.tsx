@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { supabase } from '@/lib/supabase';
 import { TablesInsert } from '@/types/supabase';
+import toast, { Toaster } from 'react-hot-toast';
 
 function BookingPageContent() {
   const searchParams = useSearchParams();
@@ -143,6 +144,26 @@ function BookingPageContent() {
     }
   };
 
+  // Función para verificar si un número de autorización ya existe
+  const checkAuthorizationNumberExists = async (numeroAutorizacion: string): Promise<boolean> => {
+    if (!numeroAutorizacion || numeroAutorizacion.trim() === '') {
+      return false;
+    }
+    
+    const { data, error } = await supabase
+      .from('informs')
+      .select('numero_autorizacion')
+      .eq('numero_autorizacion', numeroAutorizacion.trim())
+      .limit(1);
+    
+    if (error) {
+      console.error('Error verificando número de autorización:', error);
+      return false;
+    }
+    
+    return data && data.length > 0;
+  };
+
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
     
@@ -205,6 +226,30 @@ function BookingPageContent() {
     // Validar formulario
     if (!validateForm()) {
       alert('Por favor, completa todos los campos obligatorios correctamente');
+      return;
+    }
+    
+    // Verificar si algún número de autorización ya existe
+    const authorizationErrors: {[key: string]: string} = {};
+    let hasDuplicateAuthorization = false;
+    
+    for (const room of rooms) {
+      const roomData = formData[room.id] || {};
+      const numeroAutorizacion = String(roomData.numero_autorizacion || '').trim();
+      
+      if (numeroAutorizacion) {
+        const exists = await checkAuthorizationNumberExists(numeroAutorizacion);
+        if (exists) {
+          authorizationErrors[`${room.id}_numero_autorizacion`] = 'Este número de autorización ya existe y no se puede repetir';
+          hasDuplicateAuthorization = true;
+        }
+      }
+    }
+    
+    // Si hay números de autorización duplicados, mostrar errores y toast
+    if (hasDuplicateAuthorization) {
+      setErrors(prev => ({ ...prev, ...authorizationErrors }));
+      toast.error('El número de autorización debe ser único. Ya existe una reserva con este número.');
       return;
     }
     
@@ -321,6 +366,30 @@ function BookingPageContent() {
 
   return (
     <div className="h-screen bg-gray-50 overflow-y-auto">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-8">
