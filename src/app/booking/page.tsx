@@ -225,7 +225,7 @@ function BookingPageContent() {
         if (cityFromParams === 'Bogotá') {
           hotelAsignado = 'Ilar 74';
         } else if (cityFromParams === 'Medellín') {
-          hotelAsignado = 'Saana 45';
+          hotelAsignado = 'Street 47';
         } else if (cityFromParams === 'Cali') {
           hotelAsignado = 'Bulevar del Rio';
         }

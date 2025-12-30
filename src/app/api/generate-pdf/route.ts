@@ -102,9 +102,9 @@ export async function POST(request: NextRequest) {
         direccion = 'Av. 3 N #17';
         // Precios reales de Cali (Bulevar del Rio)
         precioPorNoche = 182011; // Solo usuario
-      } else if (hotelName.includes('saana 45')) {
+      } else if (hotelName.includes('street 47')) {
         direccion = 'Cra. 45 #46-43';
-        // Precios reales de Medellín (Saana 45)
+        // Precios reales de Medellín (Street 47)
         precioPorNoche = 163841; // Solo usuario
       }
     }

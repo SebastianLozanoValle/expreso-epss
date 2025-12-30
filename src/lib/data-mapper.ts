@@ -217,7 +217,7 @@ export function transformCsvDataToInforms(
              destinoNormalizado.includes('medellin') || 
              destinoNormalizado.includes('medellín') ||
              destinoNormalizado.includes('medell')) {
-      hotelAsignado = 'Saana 45';
+      hotelAsignado = 'Street 47';
     } 
     // Detectar Cali con múltiples variaciones
     else if (destinoNormalizado.includes('cal') || 

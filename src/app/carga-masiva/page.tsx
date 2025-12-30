@@ -300,7 +300,7 @@ export default function CargaMasivaPage() {
           if (destino.includes('bogotá') || destino.includes('bogota')) {
             hotelAsignado = 'Ilar 74';
           } else if (destino.includes('medellín') || destino.includes('medellin')) {
-            hotelAsignado = 'Saana 45';
+            hotelAsignado = 'Street 47';
           } else if (destino.includes('cali')) {
             hotelAsignado = 'Bulevar del Rio';
           }

@@ -223,7 +223,7 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
     
     if (hotel.includes('ilar 74') || hotel.includes('bogotá') || hotel.includes('bogota')) {
       precioBase = 133256;
-    } else if (hotel.includes('saana 45') || hotel.includes('medellín') || hotel.includes('medellin')) {
+    } else if (hotel.includes('street 47') || hotel.includes('medellín') || hotel.includes('medellin')) {
       precioBase = 163841;
     } else if (hotel.includes('bulevar del rio') || hotel.includes('cali')) {
       precioBase = 182011;
@@ -455,7 +455,7 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
                   >
                     <option value="">Seleccionar hotel</option>
                     <option value="Ilar 74">Ilar 74</option>
-                    <option value="Saana 45">Saana 45</option>
+                    <option value="Street 47">Street 47</option>
                     <option value="Bulevar del Rio">Bulevar del Rio</option>
                   </select>
                 ) : (
