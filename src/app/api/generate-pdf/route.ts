@@ -110,14 +110,51 @@ export async function POST(request: NextRequest) {
     }
     
     pdf.text(direccion, 60, hotelStartY + 5);
-    pdf.text('Teléfono(s):', 20, hotelStartY + 10);
-    pdf.text('3243396016', 60, hotelStartY + 10);
-    pdf.text('Fax:', 20, hotelStartY + 15);
-    pdf.text('COLOMBIA', 20, hotelStartY + 20);
-    pdf.text('reservas@hebrara.com', 20, hotelStartY + 25);
     
-    // Saludo - espaciado mínimo entre líneas (5 unidades), equidistante del hotel
-    const saludoStartY = 105; // 15 unidades después del final del hotel (Y: 90)
+    // Determinar teléfonos según la ciudad/hotel
+    let telefonoReservas = '3243396016';
+    let telefonoRecepcion = '';
+    let telefonoTransporte = '';
+    
+    if (data.hotel) {
+      const hotelName = data.hotel.toLowerCase();
+      if (hotelName.includes('street 47')) {
+        // Medellín
+        telefonoRecepcion = '3217936061';
+        telefonoTransporte = '3217936061';
+      } else if (hotelName.includes('ilar 74')) {
+        // Bogotá
+        telefonoRecepcion = '3112088015';
+        telefonoTransporte = '3134552772, 3001894937, 3124154315';
+      } else if (hotelName.includes('bulevar del rio')) {
+        // Cali
+        telefonoRecepcion = '3005792624';
+        telefonoTransporte = '3170789137, 3005792624';
+      }
+    }
+    
+    // Mostrar teléfonos
+    let telefonoY = hotelStartY + 10;
+    pdf.text('Reservas:', 20, telefonoY);
+    pdf.text(telefonoReservas, 60, telefonoY);
+    
+    if (telefonoRecepcion) {
+      telefonoY += 5;
+      pdf.text('Recepción:', 20, telefonoY);
+      pdf.text(telefonoRecepcion, 60, telefonoY);
+    }
+    
+    if (telefonoTransporte) {
+      telefonoY += 5;
+      pdf.text('Transporte:', 20, telefonoY);
+      pdf.text(telefonoTransporte, 60, telefonoY);
+    }
+    
+    pdf.text('COLOMBIA', 20, telefonoY + 5);
+    pdf.text('reservas@hebrara.com', 20, telefonoY + 10);
+    
+    // Saludo - espaciado dinámico basado en la posición final de los teléfonos
+    const saludoStartY = telefonoY + 10 + 15; // 15 unidades después del email
     pdf.text('Apreciados Señores,', 20, saludoStartY);
     pdf.text('Confirmamos Reserva de la siguiente manera:', 20, saludoStartY + 5);
     
@@ -355,7 +392,6 @@ export async function POST(request: NextRequest) {
       { label: 'Fecha de Llegada:', value: formatDateForDisplay(data.fecha_llegada) },
       { label: 'Fecha de Salida:', value: formatDateForDisplay(data.fecha_salida) },
       { label: 'Tipo de Habitación:', value: tipoHabitacion },
-      { label: 'Tarifa Antes de Impuestos:', value: tarifaTotal > 0 ? `$${tarifaTotal.toLocaleString('es-CO')}` : '$0' },
       { label: 'Cantidad de Habitaciones:', value: '1' },
       { label: 'Adultos:', value: cantidadInquilinos.toString() },
       { label: 'Incluye:', value: descripcionServicio },
