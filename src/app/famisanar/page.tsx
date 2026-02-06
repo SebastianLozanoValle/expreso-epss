@@ -3,6 +3,7 @@
  import { useState } from 'react'
  import { supabase } from '@/lib/supabase'
  import { useAuthStore } from '@/lib/auth-store'
+ import ProtectedRoute from '@/components/ProtectedRoute'
 
  export default function FamisanarPage() {
    const { user } = useAuthStore()
@@ -89,13 +90,14 @@
      }
    }
 
-   return (
-     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
-       <div className="max-w-3xl mx-auto bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
-         <h1 className="text-2xl font-black text-gray-900 mb-2">Famisanar</h1>
-         <p className="text-sm text-gray-600 mb-6">
-           Sube documentos PDF para almacenamiento.
-         </p>
+  return (
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto bg-white shadow-lg rounded-2xl p-8 border border-gray-100">
+          <h1 className="text-2xl font-black text-gray-900 mb-2">Famisanar</h1>
+          <p className="text-sm text-gray-600 mb-6">
+            Sube documentos PDF para almacenamiento.
+          </p>
 
          <div className="space-y-4">
           <div>
@@ -168,8 +170,9 @@
             </div>
           )}
          </div>
-       </div>
-     </div>
+        </div>
+      </div>
+    </ProtectedRoute>
    )
  }
 
