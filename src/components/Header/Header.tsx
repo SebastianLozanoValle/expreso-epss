@@ -103,6 +103,13 @@ export default function Header() {
             >
               Carga Masiva
             </button>
+
+            <button
+              onClick={() => router.push('/famisanar')}
+              className="text-gray-700 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Famisanar
+            </button>
           </nav>
 
           {/* Right Section */}
