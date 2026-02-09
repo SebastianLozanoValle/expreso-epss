@@ -296,13 +296,53 @@ export async function POST(request: NextRequest) {
           const fechaSalidaStr = data.fecha_salida.toString().trim();
           
           if (fechaLlegadaStr && fechaSalidaStr && fechaLlegadaStr !== 'null' && fechaSalidaStr !== 'null') {
-            const fechaLlegada = new Date(fechaLlegadaStr);
-            const fechaSalida = new Date(fechaSalidaStr);
+            // Función auxiliar para parsear fecha sin problemas de zona horaria
+            const parseDate = (dateStr: string): { year: number; month: number; day: number } | null => {
+              let year: number, month: number, day: number;
+              
+              if (dateStr.includes('-')) {
+                const parts = dateStr.split('-');
+                if (parts[0].length === 4) {
+                  year = parseInt(parts[0], 10);
+                  month = parseInt(parts[1], 10);
+                  day = parseInt(parts[2], 10);
+                } else {
+                  day = parseInt(parts[0], 10);
+                  month = parseInt(parts[1], 10);
+                  year = parseInt(parts[2], 10);
+                }
+              } else if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts[0].length === 4) {
+                  year = parseInt(parts[0], 10);
+                  month = parseInt(parts[1], 10);
+                  day = parseInt(parts[2], 10);
+                } else {
+                  day = parseInt(parts[0], 10);
+                  month = parseInt(parts[1], 10);
+                  year = parseInt(parts[2], 10);
+                }
+              } else {
+                return null;
+              }
+              
+              if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                return null;
+              }
+              
+              return { year, month, day };
+            };
             
-            // Verificar que las fechas sean válidas
-            if (!isNaN(fechaLlegada.getTime()) && !isNaN(fechaSalida.getTime())) {
+            const fechaLlegada = parseDate(fechaLlegadaStr);
+            const fechaSalida = parseDate(fechaSalidaStr);
+            
+            if (fechaLlegada && fechaSalida) {
+              // Crear objetos Date usando UTC para evitar problemas de zona horaria
+              const fechaLlegadaUTC = new Date(Date.UTC(fechaLlegada.year, fechaLlegada.month - 1, fechaLlegada.day));
+              const fechaSalidaUTC = new Date(Date.UTC(fechaSalida.year, fechaSalida.month - 1, fechaSalida.day));
+              
               // Calcular diferencia en días
-              const diferenciaMs = fechaSalida.getTime() - fechaLlegada.getTime();
+              const diferenciaMs = fechaSalidaUTC.getTime() - fechaLlegadaUTC.getTime();
               const diferenciaDias = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
               
               // Si la diferencia es válida y positiva, usarla; sino usar 1 noche
@@ -334,22 +374,81 @@ export async function POST(request: NextRequest) {
     }
     
     // Formatear fechas para mostrar en el PDF
+    // IMPORTANTE: Las fechas en la BD tienen 1 día sumado, así que debemos restarlo para mostrar la fecha correcta
     const formatDateForDisplay = (dateStr: string) => {
       if (!dateStr || dateStr.trim() === '' || dateStr === 'null' || dateStr === 'undefined') return 'N/A';
       try {
         const dateStrClean = dateStr.toString().trim();
-        const date = new Date(dateStrClean);
         
-        // Verificar que la fecha sea válida
-        if (isNaN(date.getTime())) {
+        // Parsear la fecha manualmente para evitar problemas de zona horaria
+        // Soporta formatos: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY
+        let year: number, month: number, day: number;
+        
+        if (dateStrClean.includes('-')) {
+          // Formato ISO o con guiones (YYYY-MM-DD o DD-MM-YYYY)
+          const parts = dateStrClean.split('-');
+          if (parts[0].length === 4) {
+            // Formato ISO: YYYY-MM-DD
+            year = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10);
+            day = parseInt(parts[2], 10);
+          } else {
+            // Formato: DD-MM-YYYY
+            day = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10);
+            year = parseInt(parts[2], 10);
+          }
+        } else if (dateStrClean.includes('/')) {
+          // Formato: DD/MM/YYYY o YYYY/MM/DD
+          const parts = dateStrClean.split('/');
+          if (parts[0].length === 4) {
+            // Formato: YYYY/MM/DD
+            year = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10);
+            day = parseInt(parts[2], 10);
+          } else {
+            // Formato: DD/MM/YYYY
+            day = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10);
+            year = parseInt(parts[2], 10);
+          }
+        } else {
+          // Si no coincide con ningún formato conocido, intentar con Date pero usando UTC
+          const date = new Date(dateStrClean);
+          if (isNaN(date.getTime())) {
+            return 'N/A';
+          }
+          // Usar métodos UTC para evitar problemas de zona horaria
+          year = date.getUTCFullYear();
+          month = date.getUTCMonth() + 1; // getUTCMonth() devuelve 0-11
+          day = date.getUTCDate();
+        }
+        
+        // Validar que los valores sean números válidos
+        if (isNaN(year) || isNaN(month) || isNaN(day)) {
           return 'N/A';
         }
         
-        return date.toLocaleDateString('es-ES', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
+        // RESTAR un día porque las fechas en la BD tienen 1 día sumado
+        // Crear una fecha usando UTC para evitar problemas de zona horaria
+        const date = new Date(Date.UTC(year, month - 1, day));
+        date.setUTCDate(date.getUTCDate() - 1);
+        
+        // Obtener los valores después de restar el día
+        year = date.getUTCFullYear();
+        month = date.getUTCMonth() + 1;
+        day = date.getUTCDate();
+        
+        // Validar rango de valores
+        if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+          return 'N/A';
+        }
+        
+        // Formatear con ceros a la izquierda
+        const dayStr = day.toString().padStart(2, '0');
+        const monthStr = month.toString().padStart(2, '0');
+        
+        return `${dayStr}/${monthStr}/${year}`;
       } catch (error) {
         console.log('Error formateando fecha:', error, 'Fecha original:', dateStr);
         return 'N/A';
