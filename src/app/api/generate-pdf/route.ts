@@ -374,7 +374,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Formatear fechas para mostrar en el PDF
-    // IMPORTANTE: Las fechas en la BD tienen 1 día sumado, así que debemos restarlo para mostrar la fecha correcta
+    // Mostrar la fecha tal cual viene de la BD, sin restar días
     const formatDateForDisplay = (dateStr: string) => {
       if (!dateStr || dateStr.trim() === '' || dateStr === 'null' || dateStr === 'undefined') return 'N/A';
       try {
@@ -429,22 +429,12 @@ export async function POST(request: NextRequest) {
           return 'N/A';
         }
         
-        // RESTAR un día porque las fechas en la BD tienen 1 día sumado
-        // Crear una fecha usando UTC para evitar problemas de zona horaria
-        const date = new Date(Date.UTC(year, month - 1, day));
-        date.setUTCDate(date.getUTCDate() - 1);
-        
-        // Obtener los valores después de restar el día
-        year = date.getUTCFullYear();
-        month = date.getUTCMonth() + 1;
-        day = date.getUTCDate();
-        
         // Validar rango de valores
         if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
           return 'N/A';
         }
         
-        // Formatear con ceros a la izquierda
+        // Formatear con ceros a la izquierda - mostrar tal cual viene de la BD
         const dayStr = day.toString().padStart(2, '0');
         const monthStr = month.toString().padStart(2, '0');
         

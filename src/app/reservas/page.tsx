@@ -9,41 +9,55 @@ import toast, { Toaster } from 'react-hot-toast';
 import DownloadModal from '@/components/DownloadModal/DownloadModal';
 
 // Función helper para mostrar fechas en la UI sin problemas de zona horaria
-// IMPORTANTE: Si en BD está 26, mostrar 25 en la UI (restar 1 día)
+// Mostrar la fecha tal cual viene de la BD, sin restar días
 const formatDateForDisplay = (dateString: string | null | undefined): string => {
   if (!dateString) return 'N/A';
   try {
-    let date: Date;
+    let year: number, month: number, day: number;
     
-    // Si está en formato YYYY-MM-DD (viene de la BD), parsearlo y RESTAR un día
+    // Si está en formato YYYY-MM-DD (viene de la BD), parsearlo directamente
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      const [year, month, day] = dateString.split('-').map(Number);
-      date = new Date(year, month - 1, day);
-      // RESTAR un día porque en BD está guardada con un día más
-      date.setDate(date.getDate() - 1);
+      const parts = dateString.split('-');
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+      day = parseInt(parts[2], 10);
     } else if (dateString.includes('T')) {
-      // Si viene en formato ISO, extraer la fecha y restar un día
+      // Si viene en formato ISO, extraer solo la fecha
       const dateOnly = dateString.split('T')[0];
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
-        const [year, month, day] = dateOnly.split('-').map(Number);
-        date = new Date(year, month - 1, day);
-        date.setDate(date.getDate() - 1);
+        const parts = dateOnly.split('-');
+        year = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10);
+        day = parseInt(parts[2], 10);
       } else {
-        date = new Date(dateString);
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+          return 'N/A';
+        }
+        year = date.getUTCFullYear();
+        month = date.getUTCMonth() + 1;
+        day = date.getUTCDate();
       }
     } else {
-      date = new Date(dateString);
+      // Si es otro formato, intentar parsearlo usando UTC
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'N/A';
+      }
+      year = date.getUTCFullYear();
+      month = date.getUTCMonth() + 1;
+      day = date.getUTCDate();
     }
     
-    if (isNaN(date.getTime())) {
+    // Validar valores
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
       return 'N/A';
     }
     
-    // Formatear a DD/MM/YYYY
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    // Formatear a DD/MM/YYYY - mostrar tal cual viene de la BD
+    const dayStr = String(day).padStart(2, '0');
+    const monthStr = String(month).padStart(2, '0');
+    return `${dayStr}/${monthStr}/${year}`;
   } catch (error) {
     console.error('Error formateando fecha para display:', error, dateString);
     return 'N/A';
@@ -70,43 +84,38 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const isEditingRef = useRef(false);
   const { userEmail, loading: loadingEmail } = useUserEmail(reserva?.creado_por || null);
+  
+  // Estados locales para las fechas cuando se están editando
+  // Esto evita que formatDateForInput procese fechas que el usuario acaba de seleccionar
+  const [localFechaCheckIn, setLocalFechaCheckIn] = useState<string>('');
+  const [localFechaCheckOut, setLocalFechaCheckOut] = useState<string>('');
 
   // Función helper para formatear fechas al formato YYYY-MM-DD para inputs date
-  // IMPORTANTE: Si en BD está 26, mostrar 25 en el input (restar 1 día)
+  // Mostrar la fecha tal cual viene de la BD, sin restar días
   const formatDateForInput = (dateString: string | null | undefined): string => {
     if (!dateString) return '';
     try {
-      let date: Date;
-      
-      // Si está en formato YYYY-MM-DD (viene de la BD), parsearlo y RESTAR un día
+      // Si está en formato YYYY-MM-DD, devolverlo directamente
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const [year, month, day] = dateString.split('-').map(Number);
-        date = new Date(year, month - 1, day);
-        // RESTAR un día porque en BD está guardada con un día más
-        date.setDate(date.getDate() - 1);
-      } else if (dateString.includes('T')) {
-        // Si viene en formato ISO, extraer la fecha y restar un día
-        const dateOnly = dateString.split('T')[0];
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
-          const [year, month, day] = dateOnly.split('-').map(Number);
-          date = new Date(year, month - 1, day);
-          date.setDate(date.getDate() - 1);
-        } else {
-          date = new Date(dateString);
-        }
-      } else {
-        date = new Date(dateString);
+        return dateString;
       }
       
+      // Si viene en formato ISO con hora, extraer solo la fecha
+      if (dateString.includes('T')) {
+        return dateString.split('T')[0];
+      }
+      
+      // Si es otro formato, intentar parsearlo
+      const date = new Date(dateString);
       if (isNaN(date.getTime())) {
         console.warn('Fecha inválida:', dateString);
         return '';
       }
       
-      // Formatear a YYYY-MM-DD
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+      // Formatear a YYYY-MM-DD usando UTC para evitar problemas de zona horaria
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     } catch (error) {
       console.error('Error formateando fecha:', error, dateString);
@@ -128,6 +137,9 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
       if (!isEditingRef.current) {
         console.log('Modal: Inicializando reserva desde prop:', reserva);
         setEditedReserva({ ...reserva });
+        // Inicializar estados locales de fechas desde la BD (tal cual vienen)
+        setLocalFechaCheckIn(formatDateForInput(reserva.fecha_check_in));
+        setLocalFechaCheckOut(formatDateForInput(reserva.fecha_check_out));
       } else {
         console.log('Modal: Ignorando actualización de reserva porque estamos editando');
       }
@@ -143,6 +155,9 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
   const handleEdit = () => {
     if (reserva) {
       setEditedReserva({ ...reserva });
+      // Inicializar estados locales de fechas desde la BD (tal cual vienen)
+      setLocalFechaCheckIn(formatDateForInput(reserva.fecha_check_in));
+      setLocalFechaCheckOut(formatDateForInput(reserva.fecha_check_out));
     }
     setIsEditing(true);
   };
@@ -150,6 +165,11 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
   const handleCancel = () => {
     setIsEditing(false);
     setEditedReserva({ ...reserva });
+    // Restaurar estados locales de fechas desde la BD
+    if (reserva) {
+      setLocalFechaCheckIn(formatDateForInput(reserva.fecha_check_in));
+      setLocalFechaCheckOut(formatDateForInput(reserva.fecha_check_out));
+    }
   };
 
   const handleSave = async () => {
@@ -165,6 +185,9 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
       if (updatedReserva) {
         console.log('✅ Datos actualizados recibidos:', updatedReserva);
         setEditedReserva({ ...updatedReserva });
+        // Actualizar estados locales de fechas desde la BD (tal cual vienen)
+        setLocalFechaCheckIn(formatDateForInput(updatedReserva.fecha_check_in));
+        setLocalFechaCheckOut(formatDateForInput(updatedReserva.fecha_check_out));
         // Forzar actualización del prop reserva también
         // Esto se hace actualizando selectedReserva en el componente padre
       }
@@ -207,6 +230,13 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
     let processedValue = value;
     if (field === 'numero_autorizacion') {
       processedValue = value.replace(/\s/g, '');
+    }
+    
+    // Para fechas, actualizar también el estado local sin procesar
+    if (field === 'fecha_check_in') {
+      setLocalFechaCheckIn(value);
+    } else if (field === 'fecha_check_out') {
+      setLocalFechaCheckOut(value);
     }
     
     console.log(`Cambiando ${field} de "${editedReserva[field]}" a "${processedValue}"`);
@@ -501,7 +531,7 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
                 {isEditing ? (
                   <input
                     type="date"
-                    value={formatDateForInput(editedReserva?.fecha_check_in)}
+                    value={localFechaCheckIn}
                     onChange={(e) => handleFieldChange('fecha_check_in', e.target.value)}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   />
@@ -517,7 +547,7 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
                 {isEditing ? (
                   <input
                     type="date"
-                    value={formatDateForInput(editedReserva?.fecha_check_out)}
+                    value={localFechaCheckOut}
                     onChange={(e) => handleFieldChange('fecha_check_out', e.target.value)}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   />
@@ -816,25 +846,14 @@ function ReservasContent() {
       });
 
       // Formatear fechas a YYYY-MM-DD (sin hora) para mantener consistencia con otras fechas
-      // IMPORTANTE: Si el usuario pone 25, guardar 26 en BD (sumar 1 día)
+      // Guardar la fecha tal cual viene del usuario, sin sumar días
       const formatDateForDB = (dateString: string | null | undefined): string | null => {
         if (!dateString) return null;
         
-        // Si viene del input date, está en formato YYYY-MM-DD, SUMAR un día
+        // Si viene del input date, está en formato YYYY-MM-DD, guardarlo tal cual
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-          const [year, month, day] = dateString.split('-').map(Number);
-          const date = new Date(year, month - 1, day);
-          // SUMAR un día para guardar en BD
-          date.setDate(date.getDate() + 1);
-          
-          // Formatear a YYYY-MM-DD
-          const formattedYear = date.getFullYear();
-          const formattedMonth = String(date.getMonth() + 1).padStart(2, '0');
-          const formattedDay = String(date.getDate()).padStart(2, '0');
-          const formatted = `${formattedYear}-${formattedMonth}-${formattedDay}`;
-          
-          console.log(`📅 Guardando fecha en BD: "${dateString}" -> "${formatted}" (sumó 1 día)`);
-          return formatted;
+          console.log(`📅 Guardando fecha en BD: "${dateString}" (sin modificar)`);
+          return dateString;
         }
         
         // Si ya está en formato ISO, extraer solo la fecha sin hora

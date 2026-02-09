@@ -27,12 +27,57 @@ export default function DownloadModal({ reserva, isOpen, onClose }: DownloadModa
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    try {
+      let year: number, month: number, day: number;
+      
+      // Si está en formato YYYY-MM-DD (viene de la BD), parsearlo directamente
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const parts = dateStr.split('-');
+        year = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10);
+        day = parseInt(parts[2], 10);
+      } else if (dateStr.includes('T')) {
+        // Si viene en formato ISO, extraer solo la fecha
+        const dateOnly = dateStr.split('T')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+          const parts = dateOnly.split('-');
+          year = parseInt(parts[0], 10);
+          month = parseInt(parts[1], 10);
+          day = parseInt(parts[2], 10);
+        } else {
+          // Si no coincide, usar Date con UTC para evitar problemas de zona horaria
+          const date = new Date(dateStr);
+          if (isNaN(date.getTime())) {
+            return '';
+          }
+          year = date.getUTCFullYear();
+          month = date.getUTCMonth() + 1;
+          day = date.getUTCDate();
+        }
+      } else {
+        // Si es otro formato, intentar parsearlo usando UTC
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+          return '';
+        }
+        year = date.getUTCFullYear();
+        month = date.getUTCMonth() + 1;
+        day = date.getUTCDate();
+      }
+      
+      // Validar valores
+      if (isNaN(year) || isNaN(month) || isNaN(day)) {
+        return '';
+      }
+      
+      // Formatear a DD/MM/YYYY - mostrar tal cual viene de la BD
+      const dayStr = String(day).padStart(2, '0');
+      const monthStr = String(month).padStart(2, '0');
+      return `${dayStr}/${monthStr}/${year}`;
+    } catch (error) {
+      console.error('Error formateando fecha:', error, dateStr);
+      return '';
+    }
   };
 
   // Parsear descripcion_servicio para separar tipo de habitación y observaciones
