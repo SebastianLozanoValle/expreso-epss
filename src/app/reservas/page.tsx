@@ -679,6 +679,115 @@ function ReservaModal({ reserva, isOpen, onClose, onSave }: ReservaModalProps) {
   );
 }
 
+// Modal de preview del PDF
+function PreviewPDFModal({ reserva, isOpen, onClose }: { reserva: Reserva | null; isOpen: boolean; onClose: () => void }) {
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen || !reserva) {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+        setPdfUrl(null);
+      }
+      setError('');
+      return;
+    }
+
+    const generatePreview = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const requestData = {
+          hotel: reserva.hotel_asignado || '',
+          numero_autorizacion: reserva.numero_autorizacion || '',
+          nombre_paciente: reserva.apellidos_y_nombres_paciente || '',
+          documento_paciente: reserva.numero_documento_paciente || '',
+          fecha_llegada: reserva.fecha_check_in || '',
+          fecha_salida: reserva.fecha_check_out || '',
+          descripcion_servicio: reserva.descripcion_servicio || '',
+          cantidad_habitaciones: reserva.cantidad_servicios_autorizados?.toString() || '1',
+          telefono: reserva.numero_contacto?.toString() || '',
+          observaciones: reserva.observaciones || '',
+          acompañante: reserva.apellidos_y_nombres_acompañante || '',
+          documento_acompañante: reserva.numero_documento_acompañante || ''
+        };
+
+        const response = await fetch('/api/generate-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestData),
+        });
+
+        if (!response.ok) throw new Error('Error al generar el PDF');
+
+        const pdfBlob = await response.blob();
+        const url = URL.createObjectURL(pdfBlob);
+        setPdfUrl(url);
+      } catch (err) {
+        console.error('Error generating preview:', err);
+        setError('Error al generar la vista previa del PDF.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    generatePreview();
+  }, [isOpen, reserva]);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  }, [pdfUrl]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="text-lg font-bold text-gray-900">
+            Vista Previa - {reserva?.numero_autorizacion || ''}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 p-4 overflow-hidden">
+          {isLoading && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Generando vista previa...</p>
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-red-600">{error}</p>
+            </div>
+          )}
+          {pdfUrl && !isLoading && (
+            <iframe
+              src={pdfUrl}
+              className="w-full h-full rounded border border-gray-200"
+              title="Vista previa del PDF"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReservasContent() {
   const { user, loading, isAuthenticated } = useAuthRedirect();
   const [reservas, setReservas] = useState<Reserva[]>([]);
@@ -687,6 +796,8 @@ function ReservasContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [downloadReserva, setDownloadReserva] = useState<Reserva | null>(null);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [previewReserva, setPreviewReserva] = useState<Reserva | null>(null);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1253,6 +1364,16 @@ function ReservasContent() {
                               Ver Detalles
                             </button>
                             <button
+                              onClick={() => { setPreviewReserva(reserva); setIsPreviewModalOpen(true); }}
+                              className="text-purple-600 hover:text-purple-900 transition-colors"
+                              title="Vista previa"
+                            >
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            <button
                               onClick={() => abrirDescarga(reserva)}
                               className="text-blue-600 hover:text-blue-900 transition-colors"
                               title="Descargar"
@@ -1366,6 +1487,16 @@ function ReservasContent() {
           setSelectedReserva(null);
         }}
         onSave={handleSaveReserva}
+      />
+
+      {/* Modal de vista previa */}
+      <PreviewPDFModal
+        reserva={previewReserva}
+        isOpen={isPreviewModalOpen}
+        onClose={() => {
+          setIsPreviewModalOpen(false);
+          setPreviewReserva(null);
+        }}
       />
 
       {/* Modal de descarga */}
