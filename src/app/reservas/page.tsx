@@ -692,6 +692,9 @@ function ReservasContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'cancelled'>('all');
+  const [filterCityHotel, setFilterCityHotel] = useState<string>('all');
+  const [filterFechaDesde, setFilterFechaDesde] = useState<string>('');
+  const [filterFechaHasta, setFilterFechaHasta] = useState<string>('');
   const [sortBy, setSortBy] = useState<'fecha_creacion' | 'apellidos_y_nombres_paciente' | 'numero_autorizacion' | 'hotel_asignado' | 'destino'>('fecha_creacion');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 10;
@@ -728,6 +731,19 @@ function ReservasContent() {
         query = query.eq('activa', true);
       } else if (filterStatus === 'cancelled') {
         query = query.eq('activa', false);
+      }
+
+      // Filtro por ciudad/hotel
+      if (filterCityHotel && filterCityHotel !== 'all') {
+        query = query.or(`destino.ilike.%${filterCityHotel}%,hotel_asignado.ilike.%${filterCityHotel}%`);
+      }
+
+      // Filtro por rango de fechas (check-in)
+      if (filterFechaDesde) {
+        query = query.gte('fecha_check_in', filterFechaDesde);
+      }
+      if (filterFechaHasta) {
+        query = query.lte('fecha_check_in', filterFechaHasta);
       }
 
       const { data, error, count } = await query;
@@ -939,7 +955,7 @@ function ReservasContent() {
     if (isAuthenticated) {
       loadReservas(currentPage);
     }
-  }, [isAuthenticated, currentPage, debouncedSearchTerm, filterStatus, sortBy, sortOrder]);
+  }, [isAuthenticated, currentPage, debouncedSearchTerm, filterStatus, filterCityHotel, filterFechaDesde, filterFechaHasta, sortBy, sortOrder]);
 
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
@@ -974,13 +990,13 @@ function ReservasContent() {
 
         {/* Filtros y búsqueda */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Buscar
                 {searchTerm && searchTerm !== debouncedSearchTerm && (
                   <span className="ml-2 text-xs text-teal-600 font-normal">
-                    🔍 Buscando...
+                    Buscando...
                   </span>
                 )}
               </label>
@@ -992,7 +1008,7 @@ function ReservasContent() {
                 className="w-full h-12 px-3 border-2 border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-gray-900 placeholder-gray-600 shadow-sm"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
               <select
@@ -1003,6 +1019,27 @@ function ReservasContent() {
                 <option value="all">Todas</option>
                 <option value="active">Activas</option>
                 <option value="cancelled">Canceladas</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ciudad / Hotel</label>
+              <select
+                value={filterCityHotel}
+                onChange={(e) => { setFilterCityHotel(e.target.value); setCurrentPage(1); }}
+                className="w-full h-12 px-3 border-2 border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-gray-900 shadow-sm"
+              >
+                <option value="all">Todos</option>
+                <optgroup label="Ciudades">
+                  <option value="BOGOTA">Bogotá</option>
+                  <option value="MEDELLIN">Medellín</option>
+                  <option value="CALI">Cali</option>
+                </optgroup>
+                <optgroup label="Hoteles">
+                  <option value="Ilar 74">Ilar 74 (Bogotá)</option>
+                  <option value="Street 47">Street 47 (Medellín)</option>
+                  <option value="Bulevar del Rio">Bulevar del Rio (Cali)</option>
+                </optgroup>
               </select>
             </div>
 
@@ -1020,6 +1057,28 @@ function ReservasContent() {
                 <option value="destino">Destino</option>
               </select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Check-in Desde</label>
+              <input
+                type="date"
+                value={filterFechaDesde}
+                onChange={(e) => { setFilterFechaDesde(e.target.value); setCurrentPage(1); }}
+                className="w-full h-12 px-3 border-2 border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-gray-900 shadow-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Check-in Hasta</label>
+              <input
+                type="date"
+                value={filterFechaHasta}
+                onChange={(e) => { setFilterFechaHasta(e.target.value); setCurrentPage(1); }}
+                className="w-full h-12 px-3 border-2 border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white text-gray-900 shadow-sm"
+              />
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Orden</label>
@@ -1033,12 +1092,28 @@ function ReservasContent() {
               </select>
             </div>
 
-            <div className="flex items-end">
+            <div className="flex items-end gap-2">
               <button
                 onClick={() => loadReservas(currentPage)}
-                className="w-full h-12 bg-teal-600 hover:bg-teal-700 text-white px-4 rounded-md font-medium transition-colors shadow-md hover:shadow-lg"
+                className="flex-1 h-12 bg-teal-600 hover:bg-teal-700 text-white px-4 rounded-md font-medium transition-colors shadow-md hover:shadow-lg"
               >
                 Buscar
+              </button>
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterStatus('all');
+                  setFilterCityHotel('all');
+                  setFilterFechaDesde('');
+                  setFilterFechaHasta('');
+                  setSortBy('fecha_creacion');
+                  setSortOrder('desc');
+                  setCurrentPage(1);
+                }}
+                className="h-12 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 rounded-md font-medium transition-colors shadow-sm"
+                title="Limpiar filtros"
+              >
+                Limpiar
               </button>
             </div>
           </div>
